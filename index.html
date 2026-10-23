@@ -30,6 +30,33 @@
 </head>
 <body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
 
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-inner">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2 class="font-bold text-slate-800 text-lg">RegMáquinas Nuvem</h2>
+        <p class="text-xs text-slate-500">Faça login para continuar</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Usuário</label>
+          <input type="text" id="login-user" required placeholder="Ex: admin ou joao" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
+          <input type="password" id="login-pass" required placeholder="••••••••" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3 rounded-lg shadow-md transition-colors mt-2">
+          Entrar no Sistema
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- HEADER -->
   <header class="bg-blue-600 text-white shadow-md flex-none px-4 py-3 flex items-center justify-between z-10">
     <div class="flex items-center gap-3">
@@ -39,7 +66,7 @@
       <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Sistemas & Setores</h1>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
+      <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
         <i class="fa-solid fa-file-excel"></i> Exportar
       </button>
     </div>
@@ -50,8 +77,8 @@
     
     <!-- ERROR BANNER -->
     <div id="error-banner" class="hidden bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-4 text-xs">
-      <p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Aviso de Conexão:</p>
-      <p id="error-message">Verifique as políticas RLS ou a ligação com o Supabase.</p>
+      <p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Aviso:</p>
+      <p id="error-message">Erro ao processar operação.</p>
     </div>
 
     <!-- VIEW 1: SECTORS LIST -->
@@ -64,7 +91,7 @@
       </div>
 
       <div id="sectors-list" class="grid grid-cols-1 gap-3">
-        <div id="loading-spinner" class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6">
+        <div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6">
           <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
           <p class="text-xs text-slate-500">A carregar dados da nuvem...</p>
         </div>
@@ -86,33 +113,46 @@
       <div id="items-list" class="space-y-3"></div>
     </section>
 
-    <!-- VIEW 3: ADMIN / AUDIT LOGS -->
+    <!-- VIEW 3: ADMIN / AUDIT LOGS & USER MANAGEMENT -->
     <section id="view-admin" class="hidden space-y-4">
-      <div id="admin-login-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
-        <i class="fa-solid fa-shield-halved text-3xl text-blue-600 mb-2"></i>
-        <h3 class="font-bold text-slate-800 text-sm">Área do Administrador</h3>
-        <p class="text-xs text-slate-500 mb-4">Insira a senha master para avaliar o histórico.</p>
-        <input type="password" id="admin-pass" placeholder="Senha Master" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm mb-3 text-center">
-        <button onclick="checkAdminLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-lg shadow">Acessar Histórico</button>
+      <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
+        <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
+        <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Mestre</h3>
+        <p class="text-xs text-slate-500 mt-1">Apenas o usuário Administrador pode gerenciar utilizadores e visualizar auditorias globais.</p>
       </div>
 
-      <div id="admin-panel" class="hidden space-y-3">
-        <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
-          <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Log de Alterações</h3>
-          <button onclick="logoutAdmin()" class="text-xs text-red-600 font-semibold">Sair do ADM</button>
+      <div id="admin-panel" class="hidden space-y-4">
+        <!-- USER CREATION & MANAGEMENT CARD -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-users-gear mr-1 text-blue-600"></i> Gerenciar Utilizadores</h3>
+            <button onclick="openUserModal()" class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">+ Novo Usuário</button>
+          </div>
+          <div id="users-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
         </div>
-        <div id="audit-logs-list" class="space-y-2"></div>
+
+        <!-- AUDIT LOGS -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria</h3>
+            <button onclick="loadAuditLogs()" class="text-xs text-blue-600 font-semibold"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+          </div>
+          <div id="audit-logs-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
       </div>
     </section>
 
     <!-- VIEW 4: SETTINGS -->
     <section id="view-settings" class="hidden space-y-4">
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-          <i class="fa-solid fa-cloud text-blue-600"></i> Conexão com Nuvem
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-blue-600"></i> Sessão Atual
         </h3>
-        <p class="text-xs text-slate-600 mb-2">Sincronizado em tempo real via Supabase.</p>
-        <span class="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">Status: Conectado</span>
+        <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700"></strong></p>
+        <p class="text-xs text-slate-600">Perfil: <strong id="current-role-display" class="uppercase text-slate-700"></strong></p>
+        <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs py-2.5 px-3 rounded-lg border border-red-200 mt-2">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> Terminar Sessão (Logout)
+        </button>
       </div>
     </section>
 
@@ -133,6 +173,38 @@
       <span class="text-[10px] font-medium">Ajustes</span>
     </button>
   </nav>
+
+  <!-- MODAL: ADD/EDIT USER (ADMIN ONLY) -->
+  <div id="modal-user" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-user-title" class="font-bold text-slate-800">Novo Utilizador</h3>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form onsubmit="saveUser(event)" class="p-5 space-y-3">
+        <input type="hidden" id="user-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome de Usuário</label>
+          <input type="text" id="modal-username" required placeholder="Ex: tecnico01" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
+          <input type="text" id="modal-password" required placeholder="Senha de acesso" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Perfil de Acesso</label>
+          <select id="modal-role" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="technician">Técnico (Padrão)</option>
+            <option value="admin">Administrador Mestre</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- MODAL: ADD/EDIT SECTOR -->
   <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -245,60 +317,75 @@
 
     let sectors = [];
     let machines = [];
+    let usersList = [];
     let currentSectorId = null;
     let currentTempPhotoFile = null;
     let html5QrcodeScanner = null;
-    const MASTER_PASSWORD = "admin123";
+    let currentUser = JSON.parse(localStorage.getItem('reg_current_user')) || null;
 
     window.onload = async () => {
-      await loadDataFromCloud();
+      if (currentUser) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('current-user-display').innerText = currentUser.username;
+        document.getElementById('current-role-display').innerText = currentUser.role === 'admin' ? 'Administrador Mestre' : 'Técnico';
+        await loadDataFromCloud();
+      }
     };
 
-    async function loadDataFromCloud() {
-      if (!supabaseClient) {
-        showError("Cliente Supabase não inicializado.");
-        renderSectors();
-        return;
-      }
-      
-      // Timeout de segurança (6 segundos) para nunca congelar a tela
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout: A ligação à nuvem demorou muito. Verifique as políticas RLS no Supabase.")), 6000)
-      );
+    async function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('login-user').value.trim();
+      const p = document.getElementById('login-pass').value.trim();
 
       try {
-        const fetchPromise = async () => {
-          const { data: secData, error: secError } = await supabaseClient.from('sectors').select('*');
-          if (secError) throw secError;
+        const { data, error } = await supabaseClient.from('users').select('*').eq('username', u).eq('password', p).single();
+        if (error || !data) {
+          alert("Usuário ou senha incorretos!");
+          return;
+        }
 
-          const { data: macData, error: macError } = await supabaseClient.from('machines').select('*');
-          if (macError) throw macError;
-
-          if(secData) sectors = secData;
-          if(macData) machines = macData;
-        };
-
-        await Promise.race([fetchPromise(), timeoutPromise]);
-        renderSectors();
-      } catch(err) {
-        console.error("Erro ao carregar dados da nuvem:", err);
-        showError(err.message || "Erro desconhecido ao carregar dados.");
-        renderSectors();
+        currentUser = data;
+        localStorage.setItem('reg_current_user', JSON.stringify(currentUser));
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('current-user-display').innerText = currentUser.username;
+        document.getElementById('current-role-display').innerText = currentUser.role === 'admin' ? 'Administrador Mestre' : 'Técnico';
+        
+        await logAuditAction("Login", `Utilizador ${currentUser.username} entrou no sistema.`);
+        await loadDataFromCloud();
+      } catch (err) {
+        alert("Erro ao validar login. Verifique a tabela 'users' no Supabase.");
       }
     }
 
-    function showError(msg) {
-      document.getElementById('error-message').innerText = msg;
-      document.getElementById('error-banner').classList.remove('hidden');
+    function handleLogout() {
+      if (confirm("Deseja terminar a sessão?")) {
+        localStorage.removeItem('reg_current_user');
+        currentUser = null;
+        location.reload();
+      }
+    }
+
+    async function loadDataFromCloud() {
+      if (!supabaseClient) return;
+      try {
+        const { data: secData } = await supabaseClient.from('sectors').select('*');
+        const { data: macData } = await supabaseClient.from('machines').select('*');
+        if(secData) sectors = secData;
+        if(macData) machines = macData;
+        renderSectors();
+      } catch(err) {
+        console.error("Erro ao carregar dados:", err);
+      }
     }
 
     async function logAuditAction(action, details) {
       try {
         const now = new Date();
         const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        const author = currentUser ? currentUser.username : 'Sistema';
         await supabaseClient.from('audit_logs').insert([{
           id: 'log_' + Date.now(),
-          user_action: action,
+          user_action: `[${author}] ${action}`,
           details: details,
           date: dateStr
         }]);
@@ -328,7 +415,8 @@
       } else if(tab === 'admin') {
         document.getElementById('view-admin').classList.remove('hidden');
         document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
-        document.getElementById('app-title').innerText = "Avaliação (ADM)";
+        document.getElementById('app-title').innerText = "Painel Master (ADM)";
+        checkAdminAccess();
       } else if(tab === 'settings') {
         document.getElementById('view-settings').classList.remove('hidden');
         document.getElementById('nav-settings').className = "flex flex-col items-center gap-1 text-blue-600";
@@ -338,6 +426,85 @@
 
     function goBack() {
       switchTab('sectors');
+    }
+
+    async function checkAdminAccess() {
+      if (currentUser && currentUser.role === 'admin') {
+        document.getElementById('admin-restricted-box').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        await loadUsersManagement();
+        await loadAuditLogs();
+      } else {
+        document.getElementById('admin-restricted-box').classList.remove('hidden');
+        document.getElementById('admin-panel').classList.add('hidden');
+      }
+    }
+
+    // USERS MANAGEMENT (ADMIN ONLY)
+    async function loadUsersManagement() {
+      const container = document.getElementById('users-list');
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando utilizadores...</p>';
+      
+      const { data } = await supabaseClient.from('users').select('*');
+      if (!data) return;
+      usersList = data;
+
+      container.innerHTML = '';
+      usersList.forEach(u => {
+        const item = document.createElement('div');
+        item.className = "flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs";
+        item.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-800">${u.username}</span>
+            <span class="ml-2 text-[10px] px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${u.role}</span>
+          </div>
+          <button onclick="deleteUser('${u.id}', '${u.username}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openUserModal() {
+      document.getElementById('user-id').value = '';
+      document.getElementById('modal-username').value = '';
+      document.getElementById('modal-password').value = '';
+      document.getElementById('modal-role').value = 'technician';
+      document.getElementById('modal-user-title').innerText = 'Novo Utilizador';
+      document.getElementById('modal-user').classList.remove('hidden');
+    }
+
+    function closeUserModal() {
+      document.getElementById('modal-user').classList.add('hidden');
+    }
+
+    async function saveUser(e) {
+      e.preventDefault();
+      const username = document.getElementById('modal-username').value.trim();
+      const password = document.getElementById('modal-password').value.trim();
+      const role = document.getElementById('modal-role').value;
+
+      const newId = 'usr_' + Date.now();
+      const { error } = await supabaseClient.from('users').insert([{ id: newId, username, password, role }]);
+      if (error) {
+        alert("Erro ao criar usuário (nome de usuário já pode existir).");
+        return;
+      }
+
+      await logAuditAction("Criou Usuário", `Novo utilizador criado: ${username} (${role})`);
+      closeUserModal();
+      await loadUsersManagement();
+    }
+
+    async function deleteUser(id, username) {
+      if (username === 'admin') {
+        alert("Não é possível remover o Administrador principal.");
+        return;
+      }
+      if (confirm(`Remover o utilizador ${username}?`)) {
+        await supabaseClient.from('users').delete().eq('id', id);
+        await logAuditAction("Removeu Usuário", `Utilizador removido: ${username}`);
+        await loadUsersManagement();
+      }
     }
 
     // SECTORS
@@ -388,16 +555,22 @@
       const name = document.getElementById('folder-name').value.trim();
       if(!name) return;
 
-      if(id) {
-        await supabaseClient.from('sectors').update({ name }).eq('id', id);
-        await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
-      } else {
-        const newId = 'sec_' + Date.now();
-        await supabaseClient.from('sectors').insert([{ id: newId, name }]);
-        await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
+      try {
+        if(id) {
+          const { error } = await supabaseClient.from('sectors').update({ name }).eq('id', id);
+          if(error) throw error;
+          await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
+        } else {
+          const newId = 'sec_' + Date.now();
+          const { error } = await supabaseClient.from('sectors').insert([{ id: newId, name }]);
+          if(error) throw error;
+          await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
+        }
+        closeFolderModal();
+        await loadDataFromCloud();
+      } catch(err) {
+        alert("Erro ao salvar setor: " + err.message);
       }
-      closeFolderModal();
-      await loadDataFromCloud();
     }
 
     function editFolder(id) {
@@ -411,9 +584,13 @@
 
     async function deleteFolder(id) {
       if(confirm("Excluir este setor e suas máquinas?")) {
-        await supabaseClient.from('sectors').delete().eq('id', id);
-        await logAuditAction("Excluiu Setor", `Setor ID: ${id}`);
-        await loadDataFromCloud();
+        const { error } = await supabaseClient.from('sectors').delete().eq('id', id);
+        if(!error) {
+          await logAuditAction("Excluiu Setor", `Setor ID: ${id}`);
+          await loadDataFromCloud();
+        } else {
+          alert("Erro ao excluir setor: " + error.message);
+        }
       }
     }
 
@@ -529,40 +706,49 @@
       const notes = document.getElementById('machine-notes').value.trim();
       if(!code) return;
 
-      let photoUrl = null;
-      if(currentTempPhotoFile) {
-        const fileName = 'photo_' + Date.now() + '.jpg';
-        const { data, error } = await supabaseClient.storage.from('machine-photos').upload(fileName, currentTempPhotoFile);
-        if(!error) {
-          const { data: publicUrlData } = supabaseClient.storage.from('machine-photos').getPublicUrl(fileName);
-          photoUrl = publicUrlData.publicUrl;
+      try {
+        let photoUrl = null;
+        if(currentTempPhotoFile) {
+          const fileName = 'photo_' + Date.now() + '.jpg';
+          const { data, error } = await supabaseClient.storage.from('machine-photos').upload(fileName, currentTempPhotoFile);
+          if(!error) {
+            const { data: publicUrlData } = supabaseClient.storage.from('machine-photos').getPublicUrl(fileName);
+            photoUrl = publicUrlData.publicUrl;
+          }
         }
+
+        const machineId = 'mac_' + Date.now();
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+
+        const { error } = await supabaseClient.from('machines').insert([{
+          id: machineId,
+          sector_id: currentSectorId,
+          code, model, status, notes,
+          photo_url: photoUrl,
+          date: dateStr
+        }]);
+        if(error) throw error;
+
+        await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} no setor ID: ${currentSectorId}`);
+        closeMachineModal();
+        await loadDataFromCloud();
+        openSectorItems(currentSectorId);
+      } catch(err) {
+        alert("Erro ao salvar máquina: " + err.message);
       }
-
-      const machineId = 'mac_' + Date.now();
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-
-      await supabaseClient.from('machines').insert([{
-        id: machineId,
-        sector_id: currentSectorId,
-        code, model, status, notes,
-        photo_url: photoUrl,
-        date: dateStr
-      }]);
-
-      await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} no setor ID: ${currentSectorId}`);
-      closeMachineModal();
-      await loadDataFromCloud();
-      openSectorItems(currentSectorId);
     }
 
     async function deleteMachine(id) {
       if(confirm("Remover esta máquina?")) {
-        await supabaseClient.from('machines').delete().eq('id', id);
-        await logAuditAction("Excluiu Máquina", `ID: ${id}`);
-        await loadDataFromCloud();
-        openSectorItems(currentSectorId);
+        const { error } = await supabaseClient.from('machines').delete().eq('id', id);
+        if(!error) {
+          await logAuditAction("Excluiu Máquina", `ID: ${id}`);
+          await loadDataFromCloud();
+          openSectorItems(currentSectorId);
+        } else {
+          alert("Erro ao excluir máquina: " + error.message);
+        }
       }
     }
 
@@ -573,41 +759,24 @@
     }
     function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
 
-    // ADMIN AUDIT
-    async function checkAdminLogin() {
-      const pass = document.getElementById('admin-pass').value;
-      if(pass === MASTER_PASSWORD) {
-        document.getElementById('admin-login-box').classList.add('hidden');
-        document.getElementById('admin-panel').classList.remove('hidden');
-        await loadAuditLogs();
-      } else {
-        alert("Senha incorreta!");
-      }
-    }
-
-    function logoutAdmin() {
-      document.getElementById('admin-pass').value = '';
-      document.getElementById('admin-panel').classList.add('hidden');
-      document.getElementById('admin-login-box').classList.remove('hidden');
-    }
-
+    // AUDIT LOGS DISPLAY
     async function loadAuditLogs() {
       const container = document.getElementById('audit-logs-list');
-      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">A carregar logs...</p>';
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
       
-      const { data, error } = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
-      if(error || !data || data.length === 0) {
-        container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Nenhum registro de alteração encontrado.</p>';
+      const { data } = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+      if(!data || data.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro encontrado.</p>';
         return;
       }
 
       container.innerHTML = '';
       data.forEach(log => {
         const item = document.createElement('div');
-        item.className = "bg-white p-3 rounded-xl border border-slate-200 text-xs flex flex-col gap-1";
+        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
         item.innerHTML = `
           <div class="flex justify-between items-center font-bold text-blue-700">
-            <span><i class="fa-solid fa-circle-dot text-[8px] mr-1 text-emerald-500"></i>${log.user_action}</span>
+            <span>${log.user_action}</span>
             <span class="text-[10px] text-slate-400 font-normal">${log.date}</span>
           </div>
           <p class="text-slate-600">${log.details}</p>
