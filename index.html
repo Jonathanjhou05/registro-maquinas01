@@ -17,15 +17,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- HTML5 QR Code Scanner -->
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <!-- Tesseract.js (OCR para leitura de fotos) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <!-- SheetJS (XLSX Export) -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <style>
     body { -webkit-tap-highlight-color: transparent; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
@@ -152,29 +150,40 @@
 
       <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
         
-        <!-- TAG CODE + SCANNER -->
+        <!-- PHOTO CAPTURE & AUTO OCR -->
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Patrimônio</label>
-          <div class="flex gap-2">
-            <input type="text" id="machine-code" required placeholder="Digite ou escaneie o código" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button type="button" onclick="startScanner()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow">
-              <i class="fa-solid fa-qrcode text-sm"></i> Ler
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Foto da Etiqueta (Leitura Automática)</label>
+          <label class="w-full bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-xl p-4 text-center cursor-pointer text-blue-700 text-xs font-semibold flex flex-col items-center justify-center gap-1.5 transition-colors">
+            <i class="fa-solid fa-camera-retro text-2xl text-blue-600"></i>
+            <span id="photo-label-text">Tirar Foto da Etiqueta</span>
+            <span class="text-[10px] text-blue-500 font-normal">O sistema lerá os dados da foto automaticamente</span>
+            <input type="file" id="machine-photo" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
+          </label>
+
+          <!-- OCR PROGRESS SPINNER -->
+          <div id="ocr-status" class="hidden mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-3">
+            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 text-base"></i>
+            <span id="ocr-status-text" class="text-xs font-medium text-slate-600">Lendo dados da foto...</span>
+          </div>
+
+          <div id="photo-preview-container" class="mt-2 hidden relative">
+            <img id="photo-preview" class="w-full h-36 object-cover rounded-lg border border-slate-200 shadow-inner">
+            <button type="button" onclick="removeCapturedPhoto()" class="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full text-xs shadow-md">
+              <i class="fa-solid fa-trash"></i>
             </button>
           </div>
         </div>
 
-        <!-- QR CODE READER CONTAINER -->
-        <div id="scanner-container" class="hidden border-2 border-dashed border-blue-400 p-2 rounded-xl bg-slate-50 relative">
-          <div id="reader" class="w-full"></div>
-          <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-red-100 text-red-600 text-xs font-bold py-1.5 rounded-lg">
-            Cancelar Leitura
-          </button>
+        <!-- TAG CODE -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Patrimônio Lido</label>
+          <input type="text" id="machine-code" required placeholder="Aguardando foto ou digite manualmente" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800 bg-slate-50">
         </div>
 
         <!-- MODEL / DESCRIPTION -->
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo / Tipo de Equipamento</label>
-          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex 3080, Impressora HP..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex, Impressora FX-250..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
         <!-- STATUS -->
@@ -186,24 +195,6 @@
             <option value="Defeito">Com Defeito / Inativo</option>
             <option value="Novo">Novo / A instalar</option>
           </select>
-        </div>
-
-        <!-- PHOTO CAPTURE -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Foto da Etiqueta / Equipamento</label>
-          <div class="flex items-center gap-3">
-            <label class="flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg p-2.5 text-center cursor-pointer text-slate-700 text-xs font-semibold flex items-center justify-center gap-2">
-              <i class="fa-solid fa-camera text-slate-500"></i>
-              <span id="photo-label-text">Tirar ou Anexar Foto</span>
-              <input type="file" id="machine-photo" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
-            </label>
-          </div>
-          <div id="photo-preview-container" class="mt-2 hidden relative">
-            <img id="photo-preview" class="w-full h-36 object-cover rounded-lg border border-slate-200 shadow-inner">
-            <button type="button" onclick="removeCapturedPhoto()" class="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full text-xs shadow-md">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
         </div>
 
         <!-- NOTES -->
@@ -280,7 +271,6 @@
     let machines = JSON.parse(localStorage.getItem('reg_machines')) || [];
     let currentSectorId = null;
     let currentTempPhoto = null;
-    let html5QrcodeScanner = null;
 
     // INITIALIZATION
     window.onload = () => {
@@ -411,7 +401,6 @@
       const sec = sectors.find(s => s.id === id);
       if (!sec) return;
       if (confirm(`Tem certeza que deseja excluir o setor "${sec.name}" e todas as suas máquinas cadastradas?`)) {
-        // Delete machines images
         const related = machines.filter(m => m.sectorId === id);
         related.forEach(m => {
           if(m.photoId) deleteImageFromDB(m.photoId);
@@ -453,7 +442,7 @@
           <div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6">
             <i class="fa-solid fa-desktop text-3xl text-slate-300 mb-2"></i>
             <p class="text-sm font-semibold text-slate-600">Nenhuma máquina cadastrada</p>
-            <p class="text-xs text-slate-400 mt-1">Clique em "Cadastrar" para adicionar equipamentos com foto e código.</p>
+            <p class="text-xs text-slate-400 mt-1">Clique em "Cadastrar" para tirar foto e registrar.</p>
           </div>
         `;
         return;
@@ -500,7 +489,7 @@
       }
     }
 
-    // ADD / CAMERA MODAL
+    // ADD MACHINE
     function openMachineModal() {
       document.getElementById('machine-code').value = '';
       document.getElementById('machine-model').value = '';
@@ -511,21 +500,25 @@
     }
 
     function closeMachineModal() {
-      stopScanner();
       document.getElementById('modal-machine').classList.add('hidden');
     }
 
-    // PHOTO UPLOAD / COMPRESSION
+    // PHOTO UPLOAD & OCR LEITURA DA ETIQUETA
     function handlePhotoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
+
+      const ocrStatus = document.getElementById('ocr-status');
+      const ocrText = document.getElementById('ocr-status-text');
+      ocrStatus.classList.remove('hidden');
+      ocrText.innerText = 'Lendo dados da foto...';
 
       const reader = new FileReader();
       reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
           const canvas = document.createElement('canvas');
-          const maxDim = 800; // Resize image for optimized performance
+          const maxDim = 1000; // Resolução otimizada para OCR
           let width = img.width;
           let height = img.height;
 
@@ -546,11 +539,40 @@
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           
-          currentTempPhoto = canvas.toDataURL('image/jpeg', 0.7);
+          currentTempPhoto = canvas.toDataURL('image/jpeg', 0.8);
           
           document.getElementById('photo-preview').src = currentTempPhoto;
           document.getElementById('photo-preview-container').classList.remove('hidden');
-          document.getElementById('photo-label-text').innerText = 'Trocar Foto';
+          document.getElementById('photo-label-text').innerText = 'Tirar Outra Foto';
+
+          // EXECUTAR LEITURA OCR VIA TESSERACT.JS
+          Tesseract.recognize(
+            currentTempPhoto,
+            'por',
+            {
+              logger: m => {
+                if(m.status === 'recognizing text') {
+                  ocrText.innerText = `Lendo texto da etiqueta... (${Math.round(m.progress * 100)}%)`;
+                }
+              }
+            }
+          ).then(({ data: { text } }) => {
+            ocrStatus.classList.add('hidden');
+            
+            // Extrai a linha mais relevante ou limpa o texto lido
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length > 0) {
+              // Preenche automaticamente o campo com o texto identificado
+              const codeInput = document.getElementById('machine-code');
+              // Filtra a maior palavra/linha com letras e números (padrão de patrimônio)
+              const bestMatch = lines.find(l => /\d/.test(l)) || lines[0];
+              codeInput.value = bestMatch.replace(/[^a-zA-Z0-9\-\.\/]/g, ' ').trim();
+            }
+          }).catch(err => {
+            console.error('Erro no OCR:', err);
+            ocrStatus.classList.add('hidden');
+          });
+
         };
         img.src = e.target.result;
       };
@@ -562,45 +584,8 @@
       document.getElementById('machine-photo').value = '';
       document.getElementById('photo-preview').src = '';
       document.getElementById('photo-preview-container').classList.add('hidden');
-      document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
-    }
-
-    // QR CODE SCANNER
-    function startScanner() {
-      const container = document.getElementById('scanner-container');
-      container.classList.remove('hidden');
-
-      if (html5QrcodeScanner) {
-        stopScanner();
-      }
-
-      html5QrcodeScanner = new Html5Qrcode("reader");
-      html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
-        (decodedText) => {
-          document.getElementById('machine-code').value = decodedText;
-          stopScanner();
-        },
-        () => {}
-      ).catch(err => {
-        alert("Não foi possível acessar a câmera. Verifique as permissões.");
-        stopScanner();
-      });
-    }
-
-    function stopScanner() {
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => {
-          html5QrcodeScanner = null;
-          document.getElementById('scanner-container').classList.add('hidden');
-        }).catch(() => {
-          html5QrcodeScanner = null;
-          document.getElementById('scanner-container').classList.add('hidden');
-        });
-      } else {
-        document.getElementById('scanner-container').classList.add('hidden');
-      }
+      document.getElementById('photo-label-text').innerText = 'Tirar Foto da Etiqueta';
+      document.getElementById('ocr-status').classList.add('hidden');
     }
 
     // SAVE MACHINE
@@ -687,7 +672,6 @@
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Inventário de Máquinas");
 
-      // Auto-fit column widths
       const max_width = data.reduce((w, r) => Math.max(w, r["Setor / Local"].length), 10);
       worksheet["!cols"] = [ { wch: max_width }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 20 } ];
 
@@ -737,7 +721,6 @@
         localStorage.clear();
         sectors = [];
         machines = [];
-        // Clear IndexedDB
         if(db) {
           const tx = db.transaction("images", "readwrite");
           tx.objectStore("images").clear();
