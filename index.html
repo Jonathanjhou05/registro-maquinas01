@@ -17,8 +17,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Tesseract.js (OCR para leitura de fotos) -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- HTML5 QR Code Scanner -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <!-- SheetJS (XLSX Export) -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
@@ -150,22 +150,33 @@
 
       <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
         
-        <!-- PHOTO CAPTURE & AUTO OCR -->
+        <!-- TAG CODE + SCANNER BUTTON -->
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Foto da Etiqueta (Leitura Automática)</label>
-          <label class="w-full bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-xl p-4 text-center cursor-pointer text-blue-700 text-xs font-semibold flex flex-col items-center justify-center gap-1.5 transition-colors">
-            <i class="fa-solid fa-camera-retro text-2xl text-blue-600"></i>
-            <span id="photo-label-text">Tirar Foto da Etiqueta</span>
-            <span class="text-[10px] text-blue-500 font-normal">O sistema lerá os dados da foto automaticamente</span>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Patrimônio</label>
+          <div class="flex gap-2">
+            <input type="text" id="machine-code" required placeholder="Digite ou escaneie o código" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
+            <button type="button" onclick="startScanner()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
+              <i class="fa-solid fa-barcode text-sm"></i> Ler Código
+            </button>
+          </div>
+        </div>
+
+        <!-- QR / BARCODE SCANNER CONTAINER -->
+        <div id="scanner-container" class="hidden border-2 border-dashed border-blue-400 p-2 rounded-xl bg-slate-50 relative">
+          <div id="reader" class="w-full"></div>
+          <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-red-100 text-red-600 text-xs font-bold py-1.5 rounded-lg">
+            Fechar Leitor
+          </button>
+        </div>
+
+        <!-- PHOTO CAPTURE -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Foto do Equipamento / Etiqueta</label>
+          <label class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg p-3 text-center cursor-pointer text-slate-700 text-xs font-semibold flex items-center justify-center gap-2">
+            <i class="fa-solid fa-camera text-blue-600 text-base"></i>
+            <span id="photo-label-text">Tirar ou Anexar Foto</span>
             <input type="file" id="machine-photo" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
           </label>
-
-          <!-- OCR PROGRESS SPINNER -->
-          <div id="ocr-status" class="hidden mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-3">
-            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 text-base"></i>
-            <span id="ocr-status-text" class="text-xs font-medium text-slate-600">Lendo dados da foto...</span>
-          </div>
-
           <div id="photo-preview-container" class="mt-2 hidden relative">
             <img id="photo-preview" class="w-full h-36 object-cover rounded-lg border border-slate-200 shadow-inner">
             <button type="button" onclick="removeCapturedPhoto()" class="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full text-xs shadow-md">
@@ -174,16 +185,10 @@
           </div>
         </div>
 
-        <!-- TAG CODE -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Patrimônio Lido</label>
-          <input type="text" id="machine-code" required placeholder="Aguardando foto ou digite manualmente" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800 bg-slate-50">
-        </div>
-
         <!-- MODEL / DESCRIPTION -->
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo / Tipo de Equipamento</label>
-          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex, Impressora FX-250..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex, Impressora HP..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
         <!-- STATUS -->
@@ -271,6 +276,7 @@
     let machines = JSON.parse(localStorage.getItem('reg_machines')) || [];
     let currentSectorId = null;
     let currentTempPhoto = null;
+    let html5QrcodeScanner = null;
 
     // INITIALIZATION
     window.onload = () => {
@@ -442,7 +448,7 @@
           <div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6">
             <i class="fa-solid fa-desktop text-3xl text-slate-300 mb-2"></i>
             <p class="text-sm font-semibold text-slate-600">Nenhuma máquina cadastrada</p>
-            <p class="text-xs text-slate-400 mt-1">Clique em "Cadastrar" para tirar foto e registrar.</p>
+            <p class="text-xs text-slate-400 mt-1">Clique em "Cadastrar" para adicionar equipamentos.</p>
           </div>
         `;
         return;
@@ -496,29 +502,26 @@
       document.getElementById('machine-status').value = 'Operacional';
       document.getElementById('machine-notes').value = '';
       removeCapturedPhoto();
+      stopScanner();
       document.getElementById('modal-machine').classList.remove('hidden');
     }
 
     function closeMachineModal() {
+      stopScanner();
       document.getElementById('modal-machine').classList.add('hidden');
     }
 
-    // PHOTO UPLOAD & OCR LEITURA DA ETIQUETA
+    // PHOTO UPLOAD
     function handlePhotoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
-
-      const ocrStatus = document.getElementById('ocr-status');
-      const ocrText = document.getElementById('ocr-status-text');
-      ocrStatus.classList.remove('hidden');
-      ocrText.innerText = 'Lendo dados da foto...';
 
       const reader = new FileReader();
       reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
           const canvas = document.createElement('canvas');
-          const maxDim = 1000; // Resolução otimizada para OCR
+          const maxDim = 900;
           let width = img.width;
           let height = img.height;
 
@@ -543,36 +546,7 @@
           
           document.getElementById('photo-preview').src = currentTempPhoto;
           document.getElementById('photo-preview-container').classList.remove('hidden');
-          document.getElementById('photo-label-text').innerText = 'Tirar Outra Foto';
-
-          // EXECUTAR LEITURA OCR VIA TESSERACT.JS
-          Tesseract.recognize(
-            currentTempPhoto,
-            'por',
-            {
-              logger: m => {
-                if(m.status === 'recognizing text') {
-                  ocrText.innerText = `Lendo texto da etiqueta... (${Math.round(m.progress * 100)}%)`;
-                }
-              }
-            }
-          ).then(({ data: { text } }) => {
-            ocrStatus.classList.add('hidden');
-            
-            // Extrai a linha mais relevante ou limpa o texto lido
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            if (lines.length > 0) {
-              // Preenche automaticamente o campo com o texto identificado
-              const codeInput = document.getElementById('machine-code');
-              // Filtra a maior palavra/linha com letras e números (padrão de patrimônio)
-              const bestMatch = lines.find(l => /\d/.test(l)) || lines[0];
-              codeInput.value = bestMatch.replace(/[^a-zA-Z0-9\-\.\/]/g, ' ').trim();
-            }
-          }).catch(err => {
-            console.error('Erro no OCR:', err);
-            ocrStatus.classList.add('hidden');
-          });
-
+          document.getElementById('photo-label-text').innerText = 'Trocar Foto';
         };
         img.src = e.target.result;
       };
@@ -584,8 +558,45 @@
       document.getElementById('machine-photo').value = '';
       document.getElementById('photo-preview').src = '';
       document.getElementById('photo-preview-container').classList.add('hidden');
-      document.getElementById('photo-label-text').innerText = 'Tirar Foto da Etiqueta';
-      document.getElementById('ocr-status').classList.add('hidden');
+      document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
+    }
+
+    // BARCODE / QR CODE SCANNER
+    function startScanner() {
+      const container = document.getElementById('scanner-container');
+      container.classList.remove('hidden');
+
+      if (html5QrcodeScanner) {
+        stopScanner();
+      }
+
+      html5QrcodeScanner = new Html5Qrcode("reader");
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        (decodedText) => {
+          document.getElementById('machine-code').value = decodedText;
+          stopScanner();
+        },
+        () => {}
+      ).catch(err => {
+        alert("Não foi possível acessar a câmera para leitura. Digite o código manualmente.");
+        stopScanner();
+      });
+    }
+
+    function stopScanner() {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+          html5QrcodeScanner = null;
+          document.getElementById('scanner-container').classList.add('hidden');
+        }).catch(() => {
+          html5QrcodeScanner = null;
+          document.getElementById('scanner-container').classList.add('hidden');
+        });
+      } else {
+        document.getElementById('scanner-container').classList.add('hidden');
+      }
     }
 
     // SAVE MACHINE
