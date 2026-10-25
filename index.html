@@ -3,24 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Registro de Máquinas - Nuvem</title>
-
-  <!-- PWA Metadata -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RegMáquinas">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2942/2942544.png">
-
+  <title>Registro de Máquinas - Local</title>
+  
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- HTML5 QR Code Scanner -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <!-- Supabase JS Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body { -webkit-tap-highlight-color: transparent; }
@@ -33,7 +23,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
 
-  <!-- LOGIN VIEW (Tela de Autenticação Inicial - Sempre Visível no Arranque) -->
+  <!-- TELA DE LOGIN -->
   <div id="view-login" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden p-6 space-y-6">
       <div class="text-center space-y-2">
@@ -41,37 +31,27 @@
           <i class="fa-solid fa-desktop"></i>
         </div>
         <h2 class="font-bold text-slate-800 text-lg">Registo de Máquinas</h2>
-        <p class="text-xs text-slate-500">Entre com as suas credenciais para aceder ao sistema</p>
+        <p class="text-xs text-slate-500">Entre com as suas credenciais</p>
       </div>
 
       <form onsubmit="handleLogin(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Utilizador</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-user"></i></span>
-            <input type="text" id="login-username" required placeholder="Ex: admin" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
+          <input type="text" id="login-username" required value="admin" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
-            <input type="password" id="login-password" required placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
+          <input type="password" id="login-password" required value="admin" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-
-        <div id="login-error" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2 rounded-lg border border-red-100">
+        <div id="login-error" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2 rounded-lg">
           Utilizador ou senha incorretos.
         </div>
-
         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl shadow-md transition">
           Entrar no Sistema
         </button>
       </form>
-
       <div class="text-center text-[10px] text-slate-400 pt-2 border-t">
-        Predefinido: admin / admin
+        Padrão: admin / admin
       </div>
     </div>
   </div>
@@ -84,47 +64,30 @@
       </button>
       <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Sistemas & Setores</h1>
     </div>
-    <div class="flex items-center gap-2">
-      <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-file-excel"></i> Excel
-      </button>
-    </div>
+    <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
+      <i class="fa-solid fa-file-excel"></i> Excel
+    </button>
   </header>
 
-  <!-- CONTENT CONTAINER -->
+  <!-- CONTEÚDO PRINCIPAL -->
   <main class="flex-1 overflow-y-auto relative p-4 pb-24" id="main-container">
     
-    <!-- VIEW 1: SECTORS LIST -->
+    <!-- SETORES -->
     <section id="view-sectors" class="space-y-4">
-      
-      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS -->
       <div class="grid grid-cols-4 gap-2 text-center">
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
-          <span id="stat-total" class="font-bold text-blue-700 text-sm">0</span>
-        </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativas</span>
-          <span id="stat-operacional" class="font-bold text-emerald-600 text-sm">0</span>
-        </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-amber-500 font-semibold uppercase">Manut.</span>
-          <span id="stat-manutencao" class="font-bold text-amber-600 text-sm">0</span>
-        </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-red-500 font-semibold uppercase">Defeito</span>
-          <span id="stat-defeito" class="font-bold text-red-600 text-sm">0</span>
-        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm"><span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span><span id="stat-total" class="font-bold text-blue-700 text-sm">0</span></div>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm"><span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativas</span><span id="stat-operacional" class="font-bold text-emerald-600 text-sm">0</span></div>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm"><span class="block text-[10px] text-amber-500 font-semibold uppercase">Manut.</span><span id="stat-manutencao" class="font-bold text-amber-600 text-sm">0</span></div>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm"><span class="block text-[10px] text-red-500 font-semibold uppercase">Defeito</span><span id="stat-defeito" class="font-bold text-red-600 text-sm">0</span></div>
       </div>
 
-      <!-- BARRA DE PESQUISA GLOBAL -->
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar patrimônio, modelo ou observação..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar patrimônio, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
       </div>
 
       <div class="flex justify-between items-center mb-2 pt-1">
-        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pastas de Setores</span>
+        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Setores</span>
         <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
           <i class="fa-solid fa-folder-plus"></i> Novo Setor
         </button>
@@ -133,33 +96,260 @@
       <div id="sectors-list" class="grid grid-cols-1 gap-3"></div>
     </section>
 
-    <!-- VIEW 2: ITEMS IN SECTOR -->
+    <!-- MÁQUINAS DO SETOR -->
     <section id="view-items" class="hidden space-y-4">
       <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
         <div>
           <h2 id="current-sector-title" class="font-bold text-base text-slate-800">Setor</h2>
-          <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registradas</p>
+          <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas</p>
         </div>
         <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
           <i class="fa-solid fa-plus"></i> Cadastrar
         </button>
       </div>
-
-      <!-- FILTROS RÁPIDOS POR ESTADO -->
-      <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
-        <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
-        <button onclick="filterMachinesByStatus('Operacional')" id="filter-btn-Operacional" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Operacional</button>
-        <button onclick="filterMachinesByStatus('Manutenção')" id="filter-btn-Manutenção" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Manutenção</button>
-        <button onclick="filterMachinesByStatus('Defeito')" id="filter-btn-Defeito" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Defeito</button>
-        <button onclick="filterMachinesByStatus('Novo')" id="filter-btn-Novo" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Novo</button>
-      </div>
-
       <div id="items-list" class="space-y-3"></div>
     </section>
 
-    <!-- VIEW 3: ADMIN / AUDIT LOGS & USER MANAGEMENT -->
-    <section id="view-admin" class="hidden space-y-4">
-      <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center hidden">
-        <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
-        <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Administrador</h3>
-        <p class="text-xs text-slate-500 mt-1">Apenas contas com perfil
+    <!-- AJUSTES -->
+    <section id="view-settings" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="font-bold text-slate-800 mb-1"><i class="fa-solid fa-user-shield text-blue-600"></i> Sessão</h3>
+        <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700">admin</strong></p>
+        <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs py-2.5 px-3 rounded-lg border border-red-200 mt-2">
+          Terminar Sessão (Logout)
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- NAVEGAÇÃO INFERIOR -->
+  <nav class="bg-white border-t border-slate-200 flex-none fixed bottom-0 left-0 right-0 z-20 flex justify-around py-2 px-4 shadow-lg">
+    <button onclick="switchTab('sectors')" id="nav-sectors" class="flex flex-col items-center gap-1 text-blue-600">
+      <i class="fa-solid fa-folder-open text-lg"></i><span class="text-[10px]">Setores</span>
+    </button>
+    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-400">
+      <i class="fa-solid fa-gear text-lg"></i><span class="text-[10px]">Ajustes</span>
+    </button>
+  </nav>
+
+  <!-- MODAL MÁQUINA -->
+  <div id="modal-machine" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto p-5 space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 id="modal-machine-title" class="font-bold text-slate-800 text-sm">Cadastrar Máquina</h3>
+        <button onclick="closeMachineModal()" class="text-slate-400 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveMachine(event)" class="space-y-3">
+        <input type="hidden" id="edit-machine-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nº do Ticket / O.S.</label>
+          <input type="text" id="machine-ticket" placeholder="Ex: TCK-001" class="w-full border rounded-lg p-2 text-xs">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Patrimônio / Código</label>
+          <input type="text" id="machine-code" required placeholder="Ex: PAT-1234" class="w-full border rounded-lg p-2 text-xs font-bold text-blue-800">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo</label>
+          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex" class="w-full border rounded-lg p-2 text-xs">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Estado</label>
+          <select id="machine-status" class="w-full border rounded-lg p-2 text-xs bg-white">
+            <option value="Operacional">Operacional</option>
+            <option value="Manutenção">Em Manutenção</option>
+            <option value="Defeito">Com Defeito</option>
+            <option value="Novo">Novo</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações</label>
+          <textarea id="machine-notes" rows="2" class="w-full border rounded-lg p-2 text-xs"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" onclick="closeMachineModal()" class="px-3 py-1.5 text-xs text-slate-600">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL SETOR -->
+  <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5 space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-slate-800 text-sm">Novo Setor</h3>
+        <button onclick="closeFolderModal()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveFolder(event)" class="space-y-3">
+        <input type="text" id="folder-name" required placeholder="Ex: TI, RH..." class="w-full border rounded-lg p-2.5 text-xs">
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeFolderModal()" class="px-3 py-1.5 text-xs text-slate-600">Cancelar</button>
+          <button type="submit" class="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[{"id":"sec_1","name":"Geral / TI"}]');
+    let machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
+    let currentSectorId = null;
+
+    window.onload = () => {
+      document.getElementById('view-login').classList.remove('hidden');
+    };
+
+    function handleLogin(e) {
+      e.preventDefault();
+      document.getElementById('view-login').classList.add('hidden');
+      renderSectors();
+    }
+
+    function handleLogout() {
+      location.reload();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('view-sectors').classList.add('hidden');
+      document.getElementById('view-items').classList.add('hidden');
+      document.getElementById('view-settings').classList.add('hidden');
+      document.getElementById('btn-back').classList.add('hidden');
+
+      if(tab === 'sectors') {
+        document.getElementById('view-sectors').classList.remove('hidden');
+        renderSectors();
+      } else if(tab === 'settings') {
+        document.getElementById('view-settings').classList.remove('hidden');
+      }
+    }
+
+    function renderSectors() {
+      const container = document.getElementById('sectors-list');
+      container.innerHTML = '';
+      
+      let total = machines.length;
+      let op = machines.filter(m => m.status === 'Operacional').length;
+      let man = machines.filter(m => m.status === 'Manutenção').length;
+      let def = machines.filter(m => m.status === 'Defeito').length;
+
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-operacional').innerText = op;
+      document.getElementById('stat-manutencao').innerText = man;
+      document.getElementById('stat-defeito').innerText = def;
+
+      sectors.forEach(sec => {
+        let count = machines.filter(m => m.sector_id === sec.id).length;
+        let div = document.createElement('div');
+        div.className = "bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between cursor-pointer hover:border-blue-300";
+        div.onclick = () => openSectorItems(sec.id);
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-folder"></i></div>
+            <div><h3 class="font-bold text-slate-800 text-sm">${sec.name}</h3><span class="text-xs text-slate-500">${count} máquinas</span></div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function openSectorItems(id) {
+      currentSectorId = id;
+      let sec = sectors.find(s => s.id === id);
+      document.getElementById('view-sectors').classList.add('hidden');
+      document.getElementById('view-items').classList.remove('hidden');
+      document.getElementById('btn-back').classList.remove('hidden');
+      document.getElementById('current-sector-title').innerText = sec.name;
+      renderMachines();
+    }
+
+    function goBack() { switchTab('sectors'); }
+
+    function renderMachines() {
+      let container = document.getElementById('items-list');
+      container.innerHTML = '';
+      let list = machines.filter(m => m.sector_id === currentSectorId);
+      document.getElementById('current-sector-count').innerText = `${list.length} máquinas`;
+
+      if(list.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 bg-white rounded-xl border border-dashed p-6 text-xs text-slate-400">Nenhuma máquina registada.</div>`;
+        return;
+      }
+
+      list.forEach(m => {
+        let card = document.createElement('div');
+        card.className = "bg-white p-3.5 rounded-xl shadow-sm border space-y-1";
+        card.innerHTML = `
+          <div class="flex justify-between items-center"><span class="font-mono font-bold text-blue-700 text-sm">${m.code}</span><span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 font-medium">${m.status}</span></div>
+          <p class="text-xs text-slate-700">${m.model || 'Sem modelo'} ${m.ticket ? '• O.S: ' + m.ticket : ''}</p>
+          <div class="flex justify-end gap-3 pt-2 border-t text-xs">
+            <button onclick="deleteMachine('${m.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i> Excluir</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openMachineModal() {
+      document.getElementById('edit-machine-id').value = '';
+      document.getElementById('machine-ticket').value = '';
+      document.getElementById('machine-code').value = '';
+      document.getElementById('machine-model').value = '';
+      document.getElementById('machine-notes').value = '';
+      document.getElementById('modal-machine').classList.remove('hidden');
+    }
+    function closeMachineModal() { document.getElementById('modal-machine').classList.add('hidden'); }
+
+    function saveMachine(e) {
+      e.preventDefault();
+      let m = {
+        id: 'mac_' + Date.now(),
+        sector_id: currentSectorId,
+        ticket: document.getElementById('machine-ticket').value,
+        code: document.getElementById('machine-code').value,
+        model: document.getElementById('machine-model').value,
+        status: document.getElementById('machine-status').value,
+        notes: document.getElementById('machine-notes').value
+      };
+      machines.push(m);
+      localStorage.setItem('reg_machines', JSON.stringify(machines));
+      closeMachineModal();
+      renderMachines();
+    }
+
+    function deleteMachine(id) {
+      if(confirm("Remover máquina?")) {
+        machines = machines.filter(m => m.id !== id);
+        localStorage.setItem('reg_machines', JSON.stringify(machines));
+        renderMachines();
+      }
+    }
+
+    function openFolderModal() { document.getElementById('modal-folder').classList.remove('hidden'); }
+    function closeFolderModal() { document.getElementById('modal-folder').classList.add('hidden'); }
+
+    function saveFolder(e) {
+      e.preventDefault();
+      let name = document.getElementById('folder-name').value;
+      sectors.push({ id: 'sec_' + Date.now(), name });
+      localStorage.setItem('reg_sectors', JSON.stringify(sectors));
+      closeFolderModal();
+      renderSectors();
+    }
+
+    function openExportModal() {
+      let content = "Setor\tTicket\tCódigo\tModelo\tEstado\n";
+      machines.forEach(m => {
+        let s = sectors.find(sec => sec.id === m.sector_id);
+        content += `${s ? s.name : 'Geral'}\t${m.ticket || ''}\t${m.code}\t${m.model || ''}\t${m.status}\n`;
+      });
+      let blob = new Blob([content], { type: 'text/tab-separated-values;charset=utf-8;' });
+      let link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "Relatorio.xls";
+      link.click();
+    }
+  </script>
+</body>
+</html>
