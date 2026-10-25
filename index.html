@@ -1,3 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Registro de Máquinas - Nuvem</title>
+
+  <!-- PWA Metadata -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RegMáquinas">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2942/2942544.png">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- HTML5 QR Code Scanner -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-inner">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2 class="font-bold text-slate-800 text-lg">RegMáquinas Nuvem</h2>
+        <p class="text-xs text-slate-500">Faça login para continuar</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Usuário</label>
+          <input type="text" id="login-user" required placeholder="Ex: admin ou joao" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
+          <input type="password" id="login-pass" required placeholder="••••••••" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3 rounded-lg shadow-md transition-colors mt-2">
+          Entrar no Sistema
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="bg-blue-600 text-white shadow-md flex-none px-4 py-3 flex items-center justify-between z-10">
+    <div class="flex items-center gap-3">
+      <button id="btn-back" onclick="goBack()" class="hidden text-white hover:text-blue-100 text-lg">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Sistemas & Setores</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
+        <i class="fa-solid fa-cloud-arrow-up"></i> Sincronizar Sheets
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENT CONTAINER -->
+  <main class="flex-1 overflow-y-auto relative p-4 pb-24" id="main-container">
+    
+    <!-- ERROR BANNER -->
+    <div id="error-banner" class="hidden bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-4 text-xs">
+      <p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Aviso:</p>
+      <p id="error-message">Erro ao processar operação.</p>
+    </div>
+
+    <!-- VIEW 1: SECTORS LIST -->
+    <section id="view-sectors" class="space-y-4">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pastas de Setores</span>
+        <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
+          <i class="fa-solid fa-folder-plus"></i> Novo Setor
+        </button>
+      </div>
+
+      <div id="sectors-list" class="grid grid-cols-1 gap-3">
+        <div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6">
+          <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+          <p class="text-xs text-slate-500">A carregar dados da nuvem...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: ITEMS IN SECTOR -->
+    <section id="view-items" class="hidden space-y-4">
+      <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <h2 id="current-sector-title" class="font-bold text-base text-slate-800">Setor</h2>
+          <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registradas</p>
+        </div>
+        <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
+          <i class="fa-solid fa-plus"></i> Cadastrar
+        </button>
+      </div>
+
+      <div id="items-list" class="space-y-3"></div>
+    </section>
+
+    <!-- VIEW 3: ADMIN / AUDIT LOGS & USER MANAGEMENT -->
+    <section id="view-admin" class="hidden space-y-4">
+      <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
+        <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
+        <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Mestre</h3>
+        <p class="text-xs text-slate-500 mt-1">Apenas o usuário Administrador pode gerenciar utilizadores e visualizar auditorias globais.</p>
+      </div>
+
+      <div id="admin-panel" class="hidden space-y-4">
+        <!-- USER CREATION & MANAGEMENT CARD -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-users-gear mr-1 text-blue-600"></i> Gerenciar Utilizadores</h3>
+            <button onclick="openUserModal()" class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">+ Novo Usuário</button>
+          </div>
+          <div id="users-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+        </div>
+
+        <!-- AUDIT LOGS -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria</h3>
+            <button onclick="loadAuditLogs()" class="text-xs text-blue-600 font-semibold"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+          </div>
+          <div id="audit-logs-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: SETTINGS -->
+    <section id="view-settings" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-blue-600"></i> Sessão Atual
+        </h3>
+        <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700"></strong></p>
+        <p class="text-xs text-slate-600">Perfil: <strong id="current-role-display" class="uppercase text-slate-700"></strong></p>
+        <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs py-2.5 px-3 rounded-lg border border-red-200 mt-2">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> Terminar Sessão (Logout)
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="bg-white border-t border-slate-200 flex-none fixed bottom-0 left-0 right-0 z-20 flex justify-around py-2 px-4 shadow-lg">
+    <button onclick="switchTab('sectors')" id="nav-sectors" class="flex flex-col items-center gap-1 text-blue-600">
+      <i class="fa-solid fa-folder-open text-lg"></i>
+      <span class="text-[10px] font-medium">Setores</span>
+    </button>
+    <button onclick="switchTab('admin')" id="nav-admin" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+      <i class="fa-solid fa-shield-halved text-lg"></i>
+      <span class="text-[10px] font-medium">Avaliar (ADM)</span>
+    </button>
+    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+      <i class="fa-solid fa-gear text-lg"></i>
+      <span class="text-[10px] font-medium">Ajustes</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: GOOGLE SHEETS SYNC OPTIONS -->
+  <div id="modal-export" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
+        <h3 class="font-bold text-emerald-800 text-sm"><i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Sincronizar com Google Sheets</h3>
+        <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-2">Selecionar Pastas/Setores:</label>
+          <div class="flex gap-2 mb-3">
+            <button type="button" onclick="toggleSelectAllExport(true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold">Marcar Todos</button>
+            <button type="button" onclick="toggleSelectAllExport(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold">Desmarcar Todos</button>
+          </div>
+          <div id="export-sectors-checkboxes" class="space-y-2 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto bg-slate-50">
+            <!-- Checkboxes gerados por JS -->
+          </div>
+        </div>
+
+        <div class="border-t pt-3">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="export-only-new" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+            <span class="font-semibold text-slate-700">Enviar apenas novos itens (evita reenvio)</span>
+          </label>
+          <p class="text-[11px] text-slate-400 mt-1 ml-6">Atualiza e alimenta a planilha online apenas com os registos pendentes, marcando-os como sincronizados.</p>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end gap-2">
+        <button type="button" onclick="closeExportModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+        <button type="button" onclick="confirmSyncToGoogleSheets()" id="btn-sync-action" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow">Enviar para Planilha</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MACHINE DETAILS -->
+  <div id="modal-machine-details" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none bg-blue-50">
+        <h3 class="font-bold text-blue-800 text-sm"><i class="fa-solid fa-circle-info mr-1.5"></i> Detalhes do Equipamento</h3>
+        <button onclick="closeMachineDetails()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <div id="detail-photo-container" class="hidden text-center">
+          <img id="detail-photo" onclick="openImageView(this.src, 'Equipamento')" class="w-full h-48 object-cover rounded-xl border shadow-sm cursor-pointer hover:opacity-95 transition">
+          <span class="text-[10px] text-slate-400 mt-1 block">Toque na foto para ampliar</span>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Patrimônio / Código:</span>
+            <span id="detail-code" class="font-mono font-bold text-blue-700 text-sm"></span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Modelo / Tipo:</span>
+            <span id="detail-model" class="font-medium text-slate-800"></span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Estado:</span>
+            <span id="detail-status" class="px-2 py-0.5 rounded-full border bg-white font-medium"></span>
+          </div>
+          <div class="flex justify-between pb-0.5">
+            <span class="text-slate-500 font-semibold">Data de Registo:</span>
+            <span id="detail-date" class="text-slate-600"></span>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-500 mb-1">Observações:</label>
+          <div id="detail-notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 min-h-[50px] whitespace-pre-wrap"></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end">
+        <button type="button" onclick="closeMachineDetails()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT USER (ADMIN ONLY) -->
+  <div id="modal-user" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-user-title" class="font-bold text-slate-800">Novo Utilizador</h3>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form onsubmit="saveUser(event)" class="p-5 space-y-3">
+        <input type="hidden" id="user-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome de Usuário</label>
+          <input type="text" id="modal-username" required placeholder="Ex: tecnico01" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
+          <input type="text" id="modal-password" required placeholder="Senha de acesso" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Perfil de Acesso</label>
+          <select id="modal-role" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="technician">Técnico (Padrão)</option>
+            <option value="admin">Administrador Mestre</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT SECTOR -->
+  <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-folder-title" class="font-bold text-slate-800">Novo Setor</h3>
+        <button onclick="closeFolderModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form onsubmit="saveFolder(event)" class="p-5 space-y-4">
+        <input type="hidden" id="folder-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
+          <input type="text" id="folder-name" required placeholder="Ex: TI, Recepção, RH..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeFolderModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT MACHINE -->
+  <div id="modal-machine" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none">
+        <h3 id="modal-machine-title" class="font-bold text-slate-800">Cadastrar Máquina</h3>
+        <button onclick="closeMachineModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="edit-machine-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Patrimônio</label>
+          <div class="flex gap-2">
+            <input type="text" id="machine-code" required placeholder="Digite ou escaneie o código" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
+            <button type="button" onclick="startScanner()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
+              <i class="fa-solid fa-barcode text-sm"></i> Ler
+            </button>
+          </div>
+        </div>
+
+        <div id="scanner-container" class="hidden border-2 border-dashed border-blue-400 p-2 rounded-xl bg-slate-50 relative">
+          <div id="reader" class="w-full"></div>
+          <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-red-100 text-red-600 text-xs font-bold py-1.5 rounded-lg">Fechar Leitor</button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Foto da Etiqueta / Equipamento</label>
+          <label class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg p-3 text-center cursor-pointer text-slate-700 text-xs font-semibold flex items-center justify-center gap-2">
+            <i class="fa-solid fa-camera text-blue-600 text-base"></i>
+            <span id="photo-label-text">Tirar ou Anexar Foto</span>
+            <input type="file" id="machine-photo" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
+          </label>
+          <div id="photo-preview-container" class="mt-2 hidden relative">
+            <img id="photo-preview" class="w-full h-36 object-cover rounded-lg border border-slate-200 shadow-inner">
+            <button type="button" onclick="removeCapturedPhoto()" class="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full text-xs shadow-md"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo / Tipo de Equipamento</label>
+          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex, Impressora FX-250..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Estado de Funcionamento</label>
+          <select id="machine-status" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="Operacional">Operacional / Em uso</option>
+            <option value="Manutenção">Em Manutenção</option>
+            <option value="Defeito">Com Defeito / Inativo</option>
+            <option value="Novo">Novo / A instalar</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações</label>
+          <textarea id="machine-notes" rows="2" placeholder="Detalhes adicionais..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 flex-none">
+          <button type="button" onclick="closeMachineModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: VIEW PHOTO FULLSCREEN -->
+  <div id="modal-image-view" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col justify-between p-4" onclick="closeImageView()">
+    <div class="flex justify-between items-center text-white">
+      <span id="image-modal-title" class="text-xs font-medium">Foto do Equipamento</span>
+      <button onclick="closeImageView()" class="text-white text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="flex-1 flex items-center justify-center p-2">
+      <img id="full-size-image" class="max-h-[80vh] max-w-full object-contain rounded-lg">
+    </div>
+  </div>
+
+  <!-- SUPABASE & APP LOGIC -->
+  <script>
+    const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
+    
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpWQ--j46vOXjlRuXD96xQiIWuvgd9kVEW6ap32rG_o8NnkTjpPlu5psLHgWwAhUnR/exec";
+
+    let supabaseClient = null;
+    try {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {
+      console.error("Erro ao iniciar Supabase:", e);
+    }
+
+    let sectors = [];
+    let machines = [];
+    let usersList = [];
+    let currentSectorId = null;
+    let currentBase64Photo = null;
+    let html5QrcodeScanner = null;
+    let currentUser = null;
+
+    try {
+      const savedUser = localStorage.getItem('reg_current_user');
+      if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
+        currentUser = JSON.parse(savedUser);
+      } else {
+        localStorage.removeItem('reg_current_user');
+      }
+    } catch (e) {
+      localStorage.removeItem('reg_current_user');
+    }
+
+    window.onload = async () => {
+      if (currentUser && currentUser.username) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('current-user-display').innerText = currentUser.username;
+        document.getElementById('current-role-display').innerText = currentUser.role === 'admin' ? 'Administrador Mestre' : 'Técnico';
+        await loadDataFromCloud();
+      } else {
+        document.getElementById('login-screen').classList.remove('hidden');
+      }
+    };
+
     async function handleLogin(e) {
       e.preventDefault();
       const u = document.getElementById('login-user').value.trim();
@@ -32,3 +455,624 @@
         alert("Erro inesperado no login: " + err.message);
       }
     }
+
+    function handleLogout() {
+      if (confirm("Deseja terminar a sessão?")) {
+        localStorage.removeItem('reg_current_user');
+        currentUser = null;
+        location.reload();
+      }
+    }
+
+    async function loadDataFromCloud() {
+      if (!supabaseClient) return;
+      try {
+        const { data: secData } = await supabaseClient.from('sectors').select('*');
+        const { data: macData } = await supabaseClient.from('machines').select('*');
+        if(secData) sectors = secData;
+        if(macData) machines = macData;
+        renderSectors();
+      } catch(err) {
+        console.error("Erro ao carregar dados:", err);
+      }
+    }
+
+    async function logAuditAction(action, details) {
+      try {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        const author = currentUser ? currentUser.username : 'Sistema';
+        await supabaseClient.from('audit_logs').insert([{
+          id: 'log_' + Date.now(),
+          user_action: `[${author}] ${action}`,
+          details: details,
+          date: dateStr
+        }]);
+      } catch (e) {
+        console.error("Erro ao gravar log:", e);
+      }
+    }
+
+    // NAVIGATION
+    function switchTab(tab) {
+      document.getElementById('view-sectors').classList.add('hidden');
+      document.getElementById('view-items').classList.add('hidden');
+      document.getElementById('view-admin').classList.add('hidden');
+      document.getElementById('view-settings').classList.add('hidden');
+      document.getElementById('btn-back').classList.add('hidden');
+
+      document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-slate-400";
+      document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-slate-400";
+      document.getElementById('nav-settings').className = "flex flex-col items-center gap-1 text-slate-400";
+
+      if(tab === 'sectors') {
+        document.getElementById('view-sectors').classList.remove('hidden');
+        document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-blue-600";
+        document.getElementById('app-title').innerText = "Sistemas & Setores";
+        currentSectorId = null;
+        renderSectors();
+      } else if(tab === 'admin') {
+        document.getElementById('view-admin').classList.remove('hidden');
+        document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
+        document.getElementById('app-title').innerText = "Painel Master (ADM)";
+        checkAdminAccess();
+      } else if(tab === 'settings') {
+        document.getElementById('view-settings').classList.remove('hidden');
+        document.getElementById('nav-settings').className = "flex flex-col items-center gap-1 text-blue-600";
+        document.getElementById('app-title').innerText = "Configurações";
+      }
+    }
+
+    function goBack() {
+      switchTab('sectors');
+    }
+
+    async function checkAdminAccess() {
+      if (currentUser && currentUser.role === 'admin') {
+        document.getElementById('admin-restricted-box').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        await loadUsersManagement();
+        await loadAuditLogs();
+      } else {
+        document.getElementById('admin-restricted-box').classList.remove('hidden');
+        document.getElementById('admin-panel').classList.add('hidden');
+      }
+    }
+
+    // USERS MANAGEMENT (ADMIN ONLY)
+    async function loadUsersManagement() {
+      const container = document.getElementById('users-list');
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando utilizadores...</p>';
+      
+      const { data } = await supabaseClient.from('users').select('*');
+      if (!data) return;
+      usersList = data;
+
+      container.innerHTML = '';
+      usersList.forEach(u => {
+        const item = document.createElement('div');
+        item.className = "flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs";
+        item.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-800">${u.username}</span>
+            <span class="ml-2 text-[10px] px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${u.role}</span>
+          </div>
+          <button onclick="deleteUser('${u.id}', '${u.username}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openUserModal() {
+      document.getElementById('user-id').value = '';
+      document.getElementById('modal-username').value = '';
+      document.getElementById('modal-password').value = '';
+      document.getElementById('modal-role').value = 'technician';
+      document.getElementById('modal-user-title').innerText = 'Novo Utilizador';
+      document.getElementById('modal-user').classList.remove('hidden');
+    }
+
+    function closeUserModal() {
+      document.getElementById('modal-user').classList.add('hidden');
+    }
+
+    async function saveUser(e) {
+      e.preventDefault();
+      const username = document.getElementById('modal-username').value.trim();
+      const password = document.getElementById('modal-password').value.trim();
+      const role = document.getElementById('modal-role').value;
+
+      const newId = 'usr_' + Date.now();
+      const { error } = await supabaseClient.from('users').insert([{ id: newId, username, password, role }]);
+      if (error) {
+        alert("Erro ao criar usuário.");
+        return;
+      }
+
+      await logAuditAction("Criou Usuário", `Novo utilizador criado: ${username} (${role})`);
+      closeUserModal();
+      await loadUsersManagement();
+    }
+
+    async function deleteUser(id, username) {
+      if (username === 'admin') {
+        alert("Não é possível remover o Administrador principal.");
+        return;
+      }
+      if (confirm(`Remover o utilizador ${username}?`)) {
+        await supabaseClient.from('users').delete().eq('id', id);
+        await logAuditAction("Removeu Usuário", `Utilizador removido: ${username}`);
+        await loadUsersManagement();
+      }
+    }
+
+    // SECTORS
+    function renderSectors() {
+      const container = document.getElementById('sectors-list');
+      container.innerHTML = '';
+
+      if (sectors.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor cadastrado na nuvem</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para começar.</p></div>`;
+        return;
+      }
+
+      sectors.forEach(sec => {
+        const count = machines.filter(m => m.sector_id === sec.id).length;
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between cursor-pointer";
+        card.onclick = () => openSectorItems(sec.id);
+        card.innerHTML = `
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg"><i class="fa-solid fa-folder"></i></div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">${sec.name}</h3>
+              <span class="text-xs text-slate-500">${count} máquina${count !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="event.stopPropagation(); editFolder('${sec.id}')" class="p-2 text-slate-400 hover:text-slate-600 text-xs"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="event.stopPropagation(); deleteFolder('${sec.id}')" class="p-2 text-slate-400 hover:text-red-500 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+            <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openFolderModal() {
+      document.getElementById('folder-id').value = '';
+      document.getElementById('folder-name').value = '';
+      document.getElementById('modal-folder-title').innerText = 'Novo Setor';
+      document.getElementById('modal-folder').classList.remove('hidden');
+    }
+
+    function closeFolderModal() { document.getElementById('modal-folder').classList.add('hidden'); }
+
+    async function saveFolder(e) {
+      e.preventDefault();
+      const id = document.getElementById('folder-id').value;
+      const name = document.getElementById('folder-name').value.trim();
+      if(!name) return;
+
+      try {
+        if(id) {
+          const { error } = await supabaseClient.from('sectors').update({ name }).eq('id', id);
+          if(error) throw error;
+          await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
+        } else {
+          const newId = 'sec_' + Date.now();
+          const { error } = await supabaseClient.from('sectors').insert([{ id: newId, name }]);
+          if(error) throw error;
+          await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
+        }
+        closeFolderModal();
+        await loadDataFromCloud();
+      } catch(err) {
+        alert("Erro ao salvar setor: " + err.message);
+      }
+    }
+
+    function editFolder(id) {
+      const sec = sectors.find(s => s.id === id);
+      if(!sec) return;
+      document.getElementById('folder-id').value = sec.id;
+      document.getElementById('folder-name').value = sec.name;
+      document.getElementById('modal-folder-title').innerText = 'Renomear Setor';
+      document.getElementById('modal-folder').classList.remove('hidden');
+    }
+
+    async function deleteFolder(id) {
+      if(confirm("Excluir este setor e suas máquinas?")) {
+        const { error } = await supabaseClient.from('sectors').delete().eq('id', id);
+        if(!error) {
+          await logAuditAction("Excluiu Setor", `Setor ID: ${id}`);
+          await loadDataFromCloud();
+        } else {
+          alert("Erro ao excluir setor: " + error.message);
+        }
+      }
+    }
+
+    // MACHINES
+    function openSectorItems(sectorId) {
+      currentSectorId = sectorId;
+      const sec = sectors.find(s => s.id === sectorId);
+      if(!sec) return;
+
+      document.getElementById('view-sectors').classList.add('hidden');
+      document.getElementById('view-items').classList.remove('hidden');
+      document.getElementById('btn-back').classList.remove('hidden');
+      document.getElementById('app-title').innerText = sec.name;
+      document.getElementById('current-sector-title').innerText = sec.name;
+      renderMachines();
+    }
+
+    function renderMachines() {
+      const container = document.getElementById('items-list');
+      container.innerHTML = '';
+      const sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
+      document.getElementById('current-sector-count').innerText = `${sectorMachines.length} máquina(s) registrada(s)`;
+
+      if(sectorMachines.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhuma máquina neste setor</p></div>`;
+        return;
+      }
+
+      sectorMachines.forEach(m => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 cursor-pointer hover:border-blue-300 transition-colors";
+        card.onclick = () => openMachineDetails(m.id);
+
+        let photoHtml = m.photo_url ? `<img src="${m.photo_url}" class="w-14 h-14 rounded-lg object-cover flex-none border shadow-sm">` : `<div class="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300 flex-none"><i class="fa-solid fa-desktop"></i></div>`;
+        const exportedBadge = m.exported ? `<span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-semibold ml-1"><i class="fa-solid fa-check"></i> Sincronizado</span>` : `<span class="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold ml-1">Pendente</span>`;
+        
+        card.innerHTML = `
+          <div class="flex items-start gap-3">
+            ${photoHtml}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1">
+                  <span class="font-mono font-bold text-blue-700 text-sm">${m.code}</span>
+                  ${exportedBadge}
+                </div>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border bg-slate-50">${m.status}</span>
+              </div>
+              <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'}</p>
+              ${m.notes ? `<p class="text-[11px] text-slate-500 mt-1 line-clamp-1">${m.notes}</p>` : ''}
+            </div>
+          </div>
+          <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
+            <span>${m.date}</span>
+            <div class="flex items-center gap-3">
+              <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
+              <button onclick="event.stopPropagation(); deleteMachine('${m.id}')" class="text-red-500 font-medium hover:text-red-700 flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openMachineDetails(machineId) {
+      const m = machines.find(item => item.id === machineId);
+      if (!m) return;
+
+      document.getElementById('detail-code').innerText = m.code;
+      document.getElementById('detail-model').innerText = m.model || 'Não especificado';
+      document.getElementById('detail-status').innerText = m.status;
+      document.getElementById('detail-date').innerText = m.date || 'Não registrada';
+      document.getElementById('detail-notes').innerText = m.notes || 'Nenhuma observação informada.';
+
+      const photoContainer = document.getElementById('detail-photo-container');
+      const detailPhoto = document.getElementById('detail-photo');
+      if (m.photo_url) {
+        detailPhoto.src = m.photo_url;
+        photoContainer.classList.remove('hidden');
+      } else {
+        photoContainer.classList.add('hidden');
+      }
+
+      document.getElementById('modal-machine-details').classList.remove('hidden');
+    }
+
+    function closeMachineDetails() {
+      document.getElementById('modal-machine-details').classList.add('hidden');
+    }
+
+    function openMachineModal() {
+      document.getElementById('edit-machine-id').value = '';
+      document.getElementById('machine-code').value = '';
+      document.getElementById('machine-model').value = '';
+      document.getElementById('machine-notes').value = '';
+      document.getElementById('modal-machine-title').innerText = 'Cadastrar Máquina';
+      removeCapturedPhoto();
+      stopScanner();
+      document.getElementById('modal-machine').classList.remove('hidden');
+    }
+
+    function closeMachineModal() {
+      stopScanner();
+      document.getElementById('modal-machine').classList.add('hidden');
+    }
+
+    function editMachine(id) {
+      const m = machines.find(item => item.id === id);
+      if (!m) return;
+
+      const now = Date.now();
+      const createdTime = m.timestamp || 0;
+      const timeDiff = now - createdTime;
+      const isWithin1Min = timeDiff <= 60000;
+      const isAdmin = currentUser && currentUser.role === 'admin';
+
+      if (!isWithin1Min && !isAdmin) {
+        alert("Prazo limite de edição expirado! A edição só é permitida até 1 minuto após o cadastro.");
+        return;
+      }
+
+      document.getElementById('edit-machine-id').value = m.id;
+      document.getElementById('machine-code').value = m.code;
+      document.getElementById('machine-model').value = m.model || '';
+      document.getElementById('machine-status').value = m.status || 'Operacional';
+      document.getElementById('machine-notes').value = m.notes || '';
+      document.getElementById('modal-machine-title').innerText = 'Editar Máquina';
+
+      if (m.photo_url) {
+        currentBase64Photo = m.photo_url;
+        document.getElementById('photo-preview').src = m.photo_url;
+        document.getElementById('photo-preview-container').classList.remove('hidden');
+        document.getElementById('photo-label-text').innerText = 'Trocar Foto';
+      } else {
+        removeCapturedPhoto();
+      }
+
+      document.getElementById('modal-machine').classList.remove('hidden');
+    }
+
+    function handlePhotoUpload(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          currentBase64Photo = canvas.toDataURL('image/jpeg', 0.7);
+          document.getElementById('photo-preview').src = currentBase64Photo;
+          document.getElementById('photo-preview-container').classList.remove('hidden');
+          document.getElementById('photo-label-text').innerText = 'Trocar Foto';
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeCapturedPhoto() {
+      currentBase64Photo = null;
+      document.getElementById('machine-photo').value = '';
+      document.getElementById('photo-preview').src = '';
+      document.getElementById('photo-preview-container').classList.add('hidden');
+      document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
+    }
+
+    function startScanner() {
+      document.getElementById('scanner-container').classList.remove('hidden');
+      if(html5QrcodeScanner) stopScanner();
+      html5QrcodeScanner = new Html5Qrcode("reader");
+      html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 220 }, (text) => {
+        document.getElementById('machine-code').value = text;
+        stopScanner();
+      }, () => {}).catch(() => stopScanner());
+    }
+
+    function stopScanner() {
+      if(html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); }).catch(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); });
+      } else {
+        document.getElementById('scanner-container').classList.add('hidden');
+      }
+    }
+
+    async function saveMachine(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-machine-id').value;
+      const code = document.getElementById('machine-code').value.trim();
+      const model = document.getElementById('machine-model').value.trim();
+      const status = document.getElementById('machine-status').value;
+      const notes = document.getElementById('machine-notes').value.trim();
+      if(!code) return;
+
+      try {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        const currentTimestamp = Date.now();
+
+        if (editId) {
+          const { error } = await supabaseClient.from('machines').update({
+            code, model, status, notes,
+            photo_url: currentBase64Photo,
+            exported: false
+          }).eq('id', editId);
+          if(error) throw error;
+
+          await logAuditAction("Editou Máquina", `Patrimônio: ${code} no setor ID: ${currentSectorId}`);
+        } else {
+          const machineId = 'mac_' + currentTimestamp;
+          const { error } = await supabaseClient.from('machines').insert([{
+            id: machineId,
+            sector_id: currentSectorId,
+            code, model, status, notes,
+            photo_url: currentBase64Photo,
+            date: dateStr,
+            timestamp: currentTimestamp,
+            exported: false
+          }]);
+          if(error) throw error;
+
+          await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} no setor ID: ${currentSectorId}`);
+        }
+
+        closeMachineModal();
+        await loadDataFromCloud();
+        openSectorItems(currentSectorId);
+      } catch(err) {
+        alert("Erro ao salvar máquina: " + err.message);
+      }
+    }
+
+    async function deleteMachine(id) {
+      if(confirm("Remover esta máquina?")) {
+        const { error } = await supabaseClient.from('machines').delete().eq('id', id);
+        if(!error) {
+          await logAuditAction("Excluiu Máquina", `ID: ${id}`);
+          await loadDataFromCloud();
+          openSectorItems(currentSectorId);
+        } else {
+          alert("Erro ao excluir máquina: " + error.message);
+        }
+      }
+    }
+
+    function openImageView(src, title) {
+      document.getElementById('full-size-image').src = src;
+      document.getElementById('image-modal-title').innerText = title;
+      document.getElementById('modal-image-view').classList.remove('hidden');
+    }
+    function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
+
+    // GOOGLE SHEETS SYNC MODAL & LOGIC
+    function openExportModal() {
+      if (sectors.length === 0) {
+        alert("Não existem setores cadastrados para sincronizar.");
+        return;
+      }
+      const container = document.getElementById('export-sectors-checkboxes');
+      container.innerHTML = '';
+
+      sectors.forEach(sec => {
+        const div = document.createElement('label');
+        div.className = "flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded";
+        div.innerHTML = `
+          <input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+          <span class="font-medium text-slate-700">${sec.name}</span>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('modal-export').classList.remove('hidden');
+    }
+
+    function closeExportModal() {
+      document.getElementById('modal-export').classList.add('hidden');
+    }
+
+    function toggleSelectAllExport(status) {
+      const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]');
+      checkboxes.forEach(chk => chk.checked = status);
+    }
+
+    async function confirmSyncToGoogleSheets() {
+      const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]:checked');
+      const selectedSectorIds = Array.from(checkboxes).map(chk => chk.value);
+
+      if (selectedSectorIds.length === 0) {
+        alert("Selecione pelo menos uma pasta/setor para sincronizar.");
+        return;
+      }
+
+      const onlyNew = document.getElementById('export-only-new').checked;
+      let machinesToSync = machines.filter(m => selectedSectorIds.includes(m.sector_id));
+
+      if (onlyNew) {
+        machinesToSync = machinesToSync.filter(m => !m.exported);
+      }
+
+      if (machinesToSync.length === 0) {
+        alert("Nenhum equipamento novo ou pendente encontrado para sincronizar nos setores selecionados.");
+        return;
+      }
+
+      const btn = document.getElementById('btn-sync-action');
+      btn.innerText = "A enviar...";
+      btn.disabled = true;
+
+      const payload = machinesToSync.map(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        return {
+          sector: sec ? sec.name : "Geral",
+          code: m.code,
+          model: m.model || "-",
+          status: m.status,
+          notes: m.notes || "-",
+          date: m.date || "-"
+        };
+      });
+
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        for (let m of machinesToSync) {
+          await supabaseClient.from('machines').update({ exported: true }).eq('id', m.id);
+          m.exported = true;
+        }
+
+        await logAuditAction("Sincronizou Sheets", `Sincronizados ${machinesToSync.length} itens para o Google Sheets.`);
+        closeExportModal();
+        if (currentSectorId) renderMachines();
+        alert("Planilha online atualizada com sucesso!");
+      } catch (err) {
+        alert("Erro ao conectar com o Google Sheets: " + err.message);
+      } finally {
+        btn.innerText = "Enviar para Planilha";
+        btn.disabled = false;
+      }
+    }
+
+    // AUDIT LOGS DISPLAY
+    async function loadAuditLogs() {
+      const container = document.getElementById('audit-logs-list');
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
+      
+      const { data } = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+      if(!data || data.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro encontrado.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      data.forEach(log => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
+        item.innerHTML = `
+          <div class="flex justify-between items-center font-bold text-blue-700">
+            <span>${log.user_action}</span>
+            <span class="text-[10px] text-slate-400 font-normal">${log.date}</span>
+          </div>
+          <p class="text-slate-600">${log.details}</p>
+        `;
+        container.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
