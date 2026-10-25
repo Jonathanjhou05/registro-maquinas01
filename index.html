@@ -204,4 +204,1048 @@
   <nav class="bg-white border-t border-slate-200 flex-none fixed bottom-0 left-0 right-0 z-20 flex justify-around py-2 px-4 shadow-lg">
     <button onclick="switchTab('sectors')" id="nav-sectors" class="flex flex-col items-center gap-1 text-blue-600">
       <i class="fa-solid fa-folder-open text-lg"></i>
-      <span class="text-[10px] font-medium">Setores
+      <span class="text-[10px] font-medium">Setores</span>
+    </button>
+    <button onclick="switchTab('admin')" id="nav-admin" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+      <i class="fa-solid fa-shield-halved text-lg"></i>
+      <span class="text-[10px] font-medium">Avaliar (ADM)</span>
+    </button>
+    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
+      <i class="fa-solid fa-gear text-lg"></i>
+      <span class="text-[10px] font-medium">Ajustes</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: EXPORTAÇÃO CSV -->
+  <div id="modal-export" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
+        <h3 class="font-bold text-emerald-800 text-sm"><i class="fa-solid fa-file-excel mr-1.5"></i> Exportar Relatório Excel</h3>
+        <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-2">Selecionar Pastas/Setores para incluir:</label>
+          <div class="flex gap-2 mb-3">
+            <button type="button" onclick="toggleSelectAllExport(true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold">Marcar Todos</button>
+            <button type="button" onclick="toggleSelectAllExport(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold">Desmarcar Todos</button>
+          </div>
+          <div id="export-sectors-checkboxes" class="space-y-2 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto bg-slate-50"></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end gap-2">
+        <button type="button" onclick="closeExportModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+        <button type="button" onclick="generateAndDownloadCSV()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-download"></i> Baixar Planilha (Excel)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MACHINE DETAILS & PRINT TICKET -->
+  <div id="modal-machine-details" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none bg-blue-50">
+        <h3 class="font-bold text-blue-800 text-sm"><i class="fa-solid fa-circle-info mr-1.5"></i> Detalhes do Equipamento</h3>
+        <button onclick="closeMachineDetails()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- ÁREA IMPRIMÍVEL (TICKET) -->
+      <div id="printable-ticket" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
+        <div id="detail-photo-container" class="hidden text-center">
+          <img id="detail-photo" onclick="openImageView(this.src, 'Equipamento')" class="w-full h-48 object-cover rounded-xl border shadow-sm cursor-pointer hover:opacity-95 transition">
+          <span class="text-[10px] text-slate-400 mt-1 block">Toque na foto para ampliar</span>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Nº do Ticket / O.S:</span>
+            <span id="detail-ticket" class="font-mono font-bold text-purple-700 text-sm">-</span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Patrimônio / Código:</span>
+            <span id="detail-code" class="font-mono font-bold text-blue-700 text-sm"></span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Modelo / Tipo:</span>
+            <span id="detail-model" class="font-medium text-slate-800"></span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Estado:</span>
+            <span id="detail-status" class="px-2 py-0.5 rounded-full border bg-white font-medium"></span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Periféricos do Conjunto:</span>
+            <span id="detail-peripherals" class="font-semibold text-slate-700">Nenhum</span>
+          </div>
+          <div class="flex justify-between pb-0.5">
+            <span class="text-slate-500 font-semibold">Data de Registo:</span>
+            <span id="detail-date" class="text-slate-600"></span>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-500 mb-1">Observações:</label>
+          <div id="detail-notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 min-h-[50px] whitespace-pre-wrap"></div>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between">
+        <button type="button" onclick="printMachineTicket()" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-print"></i> Imprimir Ticket
+        </button>
+        <button type="button" onclick="closeMachineDetails()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT USER -->
+  <div id="modal-user" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-user-title" class="font-bold text-slate-800">Novo Utilizador</h3>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form onsubmit="saveUser(event)" class="p-5 space-y-3">
+        <input type="hidden" id="user-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome de Usuário</label>
+          <input type="text" id="modal-username" required placeholder="Ex: tecnico01" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
+          <input type="text" id="modal-password" required placeholder="Senha de acesso" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Perfil de Acesso</label>
+          <select id="modal-role" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="technician">Técnico (Padrão)</option>
+            <option value="admin">Administrador Mestre</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT SECTOR -->
+  <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-folder-title" class="font-bold text-slate-800">Novo Setor</h3>
+        <button onclick="closeFolderModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form onsubmit="saveFolder(event)" class="p-5 space-y-4">
+        <input type="hidden" id="folder-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
+          <input type="text" id="folder-name" required placeholder="Ex: TI, Recepção, RH..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeFolderModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT MACHINE -->
+  <div id="modal-machine" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none">
+        <h3 id="modal-machine-title" class="font-bold text-slate-800">Cadastrar Máquina</h3>
+        <button onclick="closeMachineModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="edit-machine-id">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Patrimônio</label>
+          <div class="flex gap-2">
+            <input type="text" id="machine-code" required placeholder="Digite ou escaneie o código" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
+            <button type="button" onclick="startScanner()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
+              <i class="fa-solid fa-barcode text-sm"></i> Ler
+            </button>
+          </div>
+        </div>
+
+        <div id="scanner-container" class="hidden border-2 border-dashed border-blue-400 p-2 rounded-xl bg-slate-50 relative">
+          <div id="reader" class="w-full"></div>
+          <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-red-100 text-red-600 text-xs font-bold py-1.5 rounded-lg">Fechar Leitor</button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Foto da Etiqueta / Equipamento</label>
+          <label class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg p-3 text-center cursor-pointer text-slate-700 text-xs font-semibold flex items-center justify-center gap-2">
+            <i class="fa-solid fa-camera text-blue-600 text-base"></i>
+            <span id="photo-label-text">Tirar ou Anexar Foto</span>
+            <input type="file" id="machine-photo" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
+          </label>
+          <div id="photo-preview-container" class="mt-2 hidden relative">
+            <img id="photo-preview" class="w-full h-36 object-cover rounded-lg border border-slate-200 shadow-inner">
+            <button type="button" onclick="removeCapturedPhoto()" class="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full text-xs shadow-md"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo / Tipo de Equipamento</label>
+          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex, Impressora FX-250..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Estado de Funcionamento</label>
+          <select id="machine-status" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="Operacional">Operacional / Em uso</option>
+            <option value="Manutenção">Em Manutenção</option>
+            <option value="Defeito">Com Defeito / Inativo</option>
+            <option value="Novo">Novo / A instalar</option>
+          </select>
+        </div>
+
+        <!-- PERIFÉRICOS DO CONJUNTO -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5"><i class="fa-solid fa-boxes-stacked text-blue-600 mr-1"></i> Periféricos do Conjunto</label>
+          <div class="grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs">
+            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
+              <input type="checkbox" name="peripherals" value="Computador" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span class="font-medium text-slate-700">Computador</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
+              <input type="checkbox" name="peripherals" value="Monitor" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span class="font-medium text-slate-700">Monitor</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
+              <input type="checkbox" name="peripherals" value="Teclado" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span class="font-medium text-slate-700">Teclado</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
+              <input type="checkbox" name="peripherals" value="Mouse" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span class="font-medium text-slate-700">Mouse</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded col-span-2">
+              <input type="checkbox" name="peripherals" value="Gabinete" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span class="font-medium text-slate-700">Gabinete</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações</label>
+          <textarea id="machine-notes" rows="2" placeholder="Detalhes adicionais..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 flex-none">
+          <button type="button" onclick="closeMachineModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: VIEW PHOTO FULLSCREEN -->
+  <div id="modal-image-view" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col justify-between p-4" onclick="closeImageView()">
+    <div class="flex justify-between items-center text-white">
+      <span id="image-modal-title" class="text-xs font-medium">Foto do Equipamento</span>
+      <button onclick="closeImageView()" class="text-white text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="flex-1 flex items-center justify-center p-2">
+      <img id="full-size-image" class="max-h-[80vh] max-w-full object-contain rounded-lg">
+    </div>
+  </div>
+
+  <!-- SUPABASE & APP LOGIC -->
+  <script>
+    const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
+
+    let supabaseClient = null;
+    try {
+      if (typeof supabase !== 'undefined') {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {
+      console.error("Erro ao iniciar Supabase:", e);
+    }
+
+    let sectors = [];
+    let machines = [];
+    let usersList = [];
+
+    try { sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]'); } catch (e) { sectors = []; }
+    try { machines = JSON.parse(localStorage.getItem('reg_machines') || '[]'); } catch (e) { machines = []; }
+    try { usersList = JSON.parse(localStorage.getItem('reg_users') || '[]'); } catch (e) { usersList = []; }
+    
+    if (!sectors || !Array.isArray(sectors) || sectors.length === 0) {
+      sectors = [{ id: 'sec_default', name: 'Geral / TI' }];
+      try { localStorage.setItem('reg_sectors', JSON.stringify(sectors)); } catch(e){}
+    }
+
+    if (!usersList || !Array.isArray(usersList) || usersList.length === 0) {
+      usersList = [
+        { id: 'usr_admin', username: 'admin', password: 'admin', role: 'admin' }
+      ];
+      try { localStorage.setItem('reg_users', JSON.stringify(usersList)); } catch(e){}
+    }
+
+    let currentSectorId = null;
+    let currentFilterStatus = 'Todos';
+    let currentBase64Photo = null;
+    let html5QrcodeScanner = null;
+    let currentUser = null;
+
+    window.onload = () => {
+      try {
+        const savedUser = sessionStorage.getItem('reg_current_user');
+        if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
+          currentUser = JSON.parse(savedUser);
+          if (currentUser && currentUser.username) {
+            document.getElementById('view-login').classList.add('hidden');
+            initApp();
+          } else {
+            sessionStorage.removeItem('reg_current_user');
+            document.getElementById('view-login').classList.remove('hidden');
+          }
+        } else {
+          document.getElementById('view-login').classList.remove('hidden');
+        }
+      } catch (err) {
+        sessionStorage.removeItem('reg_current_user');
+        document.getElementById('view-login').classList.remove('hidden');
+      }
+      syncWithCloudInBackground();
+    };
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const usernameInput = document.getElementById('login-username').value.trim();
+      const passwordInput = document.getElementById('login-password').value.trim();
+      const errorBox = document.getElementById('login-error');
+
+      let foundUser = usersList.find(u => u.username === usernameInput && u.password === passwordInput);
+
+      if (!foundUser && usernameInput === 'admin' && passwordInput === 'admin') {
+        foundUser = { id: 'usr_admin', username: 'admin', role: 'admin' };
+      }
+
+      if (foundUser) {
+        currentUser = foundUser;
+        sessionStorage.setItem('reg_current_user', JSON.stringify(currentUser));
+        errorBox.classList.add('hidden');
+        document.getElementById('view-login').classList.add('hidden');
+        initApp();
+      } else {
+        errorBox.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      if (confirm("Tem certeza que deseja terminar a sessão?")) {
+        sessionStorage.removeItem('reg_current_user');
+        currentUser = null;
+        location.reload();
+      }
+    }
+
+    function initApp() {
+      renderSectors();
+      
+      const userDisplay = document.getElementById('current-user-display');
+      const roleDisplay = document.getElementById('current-role-display');
+      if (userDisplay && currentUser) userDisplay.innerText = currentUser.username;
+      if (roleDisplay && currentUser) roleDisplay.innerText = currentUser.role.toUpperCase();
+    }
+
+    async function syncWithCloudInBackground() {
+      if (!supabaseClient) return;
+      try {
+        const [secRes, macRes, usrRes] = await Promise.all([
+          supabaseClient.from('sectors').select('*'),
+          supabaseClient.from('machines').select('*'),
+          supabaseClient.from('users').select('*')
+        ]);
+
+        if (!secRes.error && secRes.data && Array.isArray(secRes.data) && secRes.data.length > 0) {
+          sectors = secRes.data;
+          localStorage.setItem('reg_sectors', JSON.stringify(sectors));
+        }
+        if (!macRes.error && macRes.data && Array.isArray(macRes.data)) {
+          machines = macRes.data;
+          localStorage.setItem('reg_machines', JSON.stringify(machines));
+        }
+        if (!usrRes.error && usrRes.data && Array.isArray(usrRes.data) && usrRes.data.length > 0) {
+          usersList = usrRes.data;
+          localStorage.setItem('reg_users', JSON.stringify(usersList));
+        }
+
+        if(!currentSectorId && !document.getElementById('view-sectors').classList.contains('hidden')) {
+          renderSectors();
+        }
+      } catch (err) {
+        console.warn("Modo local ativo:", err);
+      }
+    }
+
+    function updateDashboardStats() {
+      const total = machines.length;
+      const operacional = machines.filter(m => m.status === 'Operacional').length;
+      const manutencao = machines.filter(m => m.status === 'Manutenção').length;
+      const defeito = machines.filter(m => m.status === 'Defeito').length;
+
+      const elTotal = document.getElementById('stat-total');
+      const elOperacional = document.getElementById('stat-operacional');
+      const elManutencao = document.getElementById('stat-manutencao');
+      const elDefeito = document.getElementById('stat-defeito');
+
+      if(elTotal) elTotal.innerText = total;
+      if(elOperacional) elOperacional.innerText = operacional;
+      if(elManutencao) elManutencao.innerText = manutencao;
+      if(elDefeito) elDefeito.innerText = defeito;
+    }
+
+    // PESQUISA GLOBAL
+    function handleGlobalSearch(query) {
+      const container = document.getElementById('sectors-list');
+      if(!container) return;
+      const q = query.toLowerCase().trim();
+
+      if (!q) {
+        renderSectors();
+        return;
+      }
+
+      const matchedMachines = machines.filter(m => 
+        (m.code && m.code.toLowerCase().includes(q)) || 
+        (m.model && m.model.toLowerCase().includes(q)) || 
+        (m.ticket && m.ticket.toLowerCase().includes(q)) ||
+        (m.notes && m.notes.toLowerCase().includes(q)) ||
+        (m.peripherals && m.peripherals.some(p => p.toLowerCase().includes(q)))
+      );
+
+      container.innerHTML = `<h3 class="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Resultados da Pesquisa (${matchedMachines.length})</h3>`;
+
+      if (matchedMachines.length === 0) {
+        container.innerHTML += `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-500">Nenhum equipamento encontrado para "${q}".</div>`;
+        return;
+      }
+
+      matchedMachines.forEach(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        const sectorName = sec ? sec.name : 'Geral';
+        const card = document.createElement('div');
+        card.className = "bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 cursor-pointer hover:border-blue-300 transition-all";
+        card.onclick = () => openMachineDetails(m.id);
+
+        let photoHtml = m.photo_url ? `<img src="${m.photo_url}" class="w-14 h-14 rounded-lg object-cover flex-none border shadow-sm">` : `<div class="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300 flex-none"><i class="fa-solid fa-desktop"></i></div>`;
+        const perfText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum periférico';
+
+        card.innerHTML = `
+          <div class="flex items-start gap-3">
+            ${photoHtml}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-blue-700 text-sm">${m.code}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
+              </div>
+              <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-slate-400">(${sectorName})</span></p>
+              ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
+              <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    async function logAuditAction(action, details) {
+      try {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        if(supabaseClient && currentUser) {
+          await supabaseClient.from('audit_logs').insert([{
+            id: 'log_' + Date.now(),
+            user_action: `[${currentUser.username}] ${action}`,
+            details: details,
+            date: dateStr
+          }]);
+        }
+      } catch (e) { console.error("Erro ao gravar log:", e); }
+    }
+
+    // NAVIGATION
+    function switchTab(tab) {
+      document.getElementById('view-sectors').classList.add('hidden');
+      document.getElementById('view-items').classList.add('hidden');
+      document.getElementById('view-admin').classList.add('hidden');
+      document.getElementById('view-settings').classList.add('hidden');
+      document.getElementById('btn-back').classList.add('hidden');
+
+      document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-slate-400";
+      document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-slate-400";
+      document.getElementById('nav-settings').className = "flex flex-col items-center gap-1 text-slate-400";
+
+      if(tab === 'sectors') {
+        document.getElementById('view-sectors').classList.remove('hidden');
+        document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-blue-600";
+        document.getElementById('app-title').innerText = "Sistemas & Setores";
+        currentSectorId = null;
+        renderSectors();
+      } else if(tab === 'admin') {
+        document.getElementById('view-admin').classList.remove('hidden');
+        document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
+        document.getElementById('app-title').innerText = "Painel Master (ADM)";
+        checkAdminAccess();
+      } else if(tab === 'settings') {
+        document.getElementById('view-settings').classList.remove('hidden');
+        document.getElementById('nav-settings').className = "flex flex-col items-center gap-1 text-blue-600";
+        document.getElementById('app-title').innerText = "Configurações";
+      }
+    }
+
+    function goBack() { switchTab('sectors'); }
+
+    async function checkAdminAccess() {
+      const restrictedBox = document.getElementById('admin-restricted-box');
+      const adminPanel = document.getElementById('admin-panel');
+
+      if (currentUser && currentUser.role === 'admin') {
+        restrictedBox.classList.add('hidden');
+        adminPanel.classList.remove('hidden');
+        await loadUsersManagement();
+        await loadAuditLogs();
+      } else {
+        restrictedBox.classList.remove('hidden');
+        adminPanel.classList.add('hidden');
+      }
+    }
+
+    // USERS MANAGEMENT
+    async function loadUsersManagement() {
+      const container = document.getElementById('users-list');
+      if(!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando utilizadores...</p>';
+      try {
+        if(supabaseClient) {
+          const { data } = await supabaseClient.from('users').select('*');
+          if (data && data.length > 0) {
+            usersList = data;
+            localStorage.setItem('reg_users', JSON.stringify(usersList));
+          }
+        }
+      } catch(e) {}
+      
+      container.innerHTML = '';
+      usersList.forEach(u => {
+        const item = document.createElement('div');
+        item.className = "flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs";
+        item.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-800">${u.username}</span>
+            <span class="ml-2 text-[10px] px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${u.role}</span>
+          </div>
+          <button onclick="deleteUser('${u.id}', '${u.username}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openUserModal() {
+      document.getElementById('user-id').value = '';
+      document.getElementById('modal-username').value = '';
+      document.getElementById('modal-password').value = '';
+      document.getElementById('modal-role').value = 'technician';
+      document.getElementById('modal-user-title').innerText = 'Novo Utilizador';
+      document.getElementById('modal-user').classList.remove('hidden');
+    }
+    function closeUserModal() { document.getElementById('modal-user').classList.add('hidden'); }
+
+    async function saveUser(e) {
+      e.preventDefault();
+      const username = document.getElementById('modal-username').value.trim();
+      const password = document.getElementById('modal-password').value.trim();
+      const role = document.getElementById('modal-role').value;
+      const newId = 'usr_' + Date.now();
+      const newUser = { id: newId, username, password, role };
+      
+      usersList.push(newUser);
+      localStorage.setItem('reg_users', JSON.stringify(usersList));
+
+      try {
+        if(supabaseClient) await supabaseClient.from('users').insert([newUser]);
+      } catch(err) {}
+
+      await logAuditAction("Criou Usuário", `Novo utilizador criado: ${username} (${role})`);
+      closeUserModal();
+      await loadUsersManagement();
+    }
+
+    async function deleteUser(id, username) {
+      if (username === 'admin') { alert("Não é possível remover o Administrador principal."); return; }
+      if (confirm(`Remover o utilizador ${username}?`)) {
+        usersList = usersList.filter(u => u.id !== id);
+        localStorage.setItem('reg_users', JSON.stringify(usersList));
+
+        try { if(supabaseClient) await supabaseClient.from('users').delete().eq('id', id); } catch(e){}
+        await logAuditAction("Removeu Usuário", `Utilizador removido: ${username}`);
+        await loadUsersManagement();
+      }
+    }
+
+    // SECTORS
+    function renderSectors() {
+      updateDashboardStats();
+      const container = document.getElementById('sectors-list');
+      if(!container) return;
+      container.innerHTML = '';
+
+      if (!sectors || sectors.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor cadastrado</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para começar.</p></div>`;
+        return;
+      }
+
+      sectors.forEach(sec => {
+        const count = machines.filter(m => m.sector_id === sec.id).length;
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between cursor-pointer";
+        card.onclick = () => openSectorItems(sec.id);
+        card.innerHTML = `
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg"><i class="fa-solid fa-folder"></i></div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">${sec.name}</h3>
+              <span class="text-xs text-slate-500">${count} máquina${count !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="event.stopPropagation(); editFolder('${sec.id}')" class="p-2 text-slate-400 hover:text-slate-600 text-xs"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="event.stopPropagation(); deleteFolder('${sec.id}')" class="p-2 text-slate-400 hover:text-red-500 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+            <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openFolderModal() {
+      document.getElementById('folder-id').value = '';
+      document.getElementById('folder-name').value = '';
+      document.getElementById('modal-folder-title').innerText = 'Novo Setor';
+      document.getElementById('modal-folder').classList.remove('hidden');
+    }
+    function closeFolderModal() { document.getElementById('modal-folder').classList.add('hidden'); }
+
+    async function saveFolder(e) {
+      e.preventDefault();
+      const id = document.getElementById('folder-id').value;
+      const name = document.getElementById('folder-name').value.trim();
+      if(!name) return;
+
+      if(id) {
+        const sec = sectors.find(s => s.id === id);
+        if(sec) sec.name = name;
+        try { if(supabaseClient) await supabaseClient.from('sectors').update({ name }).eq('id', id); } catch(e){}
+        await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
+      } else {
+        const newId = 'sec_' + Date.now();
+        sectors.push({ id: newId, name });
+        try { if(supabaseClient) await supabaseClient.from('sectors').insert([{ id: newId, name }]); } catch(e){}
+        await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
+      }
+      localStorage.setItem('reg_sectors', JSON.stringify(sectors));
+      closeFolderModal();
+      renderSectors();
+    }
+
+    function editFolder(id) {
+      const sec = sectors.find(s => s.id === id);
+      if(!sec) return;
+      document.getElementById('folder-id').value = sec.id;
+      document.getElementById('folder-name').value = sec.name;
+      document.getElementById('modal-folder-title').innerText = 'Renomear Setor';
+      document.getElementById('modal-folder').classList.remove('hidden');
+    }
+
+    async function deleteFolder(id) {
+      if(confirm("Excluir este setor e suas máquinas?")) {
+        sectors = sectors.filter(s => s.id !== id);
+        machines = machines.filter(m => m.sector_id !== id);
+        localStorage.setItem('reg_sectors', JSON.stringify(sectors));
+        localStorage.setItem('reg_machines', JSON.stringify(machines));
+        try {
+          if(supabaseClient) await supabaseClient.from('sectors').delete().eq('id', id);
+        } catch(e){}
+        await logAuditAction("Excluiu Setor", `Setor ID: ${id}`);
+        renderSectors();
+      }
+    }
+
+    // MACHINES
+    function openSectorItems(sectorId) {
+      currentSectorId = sectorId;
+      currentFilterStatus = 'Todos';
+      highlightFilterButton('Todos');
+      const sec = sectors.find(s => s.id === sectorId);
+      if(!sec) return;
+
+      document.getElementById('view-sectors').classList.add('hidden');
+      document.getElementById('view-items').classList.remove('hidden');
+      document.getElementById('btn-back').classList.remove('hidden');
+      document.getElementById('app-title').innerText = sec.name;
+      document.getElementById('current-sector-title').innerText = sec.name;
+      renderMachines();
+    }
+
+    function filterMachinesByStatus(status) {
+      currentFilterStatus = status;
+      highlightFilterButton(status);
+      renderMachines();
+    }
+
+    function highlightFilterButton(activeStatus) {
+      ['Todos', 'Operacional', 'Manutenção', 'Defeito', 'Novo'].forEach(st => {
+        const btn = document.getElementById(`filter-btn-${st}`);
+        if(!btn) return;
+        if(st === activeStatus) {
+          btn.className = "px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap";
+        }
+      });
+    }
+
+    function renderMachines() {
+      const container = document.getElementById('items-list');
+      if(!container) return;
+      container.innerHTML = '';
+      
+      let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
+      if(currentFilterStatus !== 'Todos') {
+        sectorMachines = sectorMachines.filter(m => m.status === currentFilterStatus);
+      }
+
+      document.getElementById('current-sector-count').innerText = `${sectorMachines.length} máquina(s) encontrada(s)`;
+
+      if(sectorMachines.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhuma máquina com este filtro</p></div>`;
+        return;
+      }
+
+      sectorMachines.forEach(m => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 cursor-pointer hover:border-blue-300 transition-all";
+        card.onclick = () => openMachineDetails(m.id);
+
+        let photoHtml = m.photo_url ? `<img src="${m.photo_url}" class="w-14 h-14 rounded-lg object-cover flex-none border shadow-sm">` : `<div class="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300 flex-none"><i class="fa-solid fa-desktop"></i></div>`;
+        const perfText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum periférico';
+        
+        card.innerHTML = `
+          <div class="flex items-start gap-3">
+            ${photoHtml}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-blue-700 text-sm">${m.code}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
+              </div>
+              <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'}</p>
+              ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
+              <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
+              ${m.notes ? `<p class="text-[11px] text-slate-500 mt-1 line-clamp-1">${m.notes}</p>` : ''}
+            </div>
+          </div>
+          <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
+            <span>${m.date}</span>
+            <div class="flex items-center gap-3">
+              <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
+              <button onclick="event.stopPropagation(); deleteMachine('${m.id}')" class="text-red-500 font-medium hover:text-red-700 flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openMachineDetails(machineId) {
+      const m = machines.find(item => item.id === machineId);
+      if (!m) return;
+
+      document.getElementById('detail-ticket').innerText = m.ticket || 'Não informado';
+      document.getElementById('detail-code').innerText = m.code;
+      document.getElementById('detail-model').innerText = m.model || 'Não especificado';
+      document.getElementById('detail-status').innerText = m.status;
+      document.getElementById('detail-peripherals').innerText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum';
+      document.getElementById('detail-date').innerText = m.date || 'Não registrada';
+      document.getElementById('detail-notes').innerText = m.notes || 'Nenhuma observação informada.';
+
+      const photoContainer = document.getElementById('detail-photo-container');
+      const detailPhoto = document.getElementById('detail-photo');
+      if (m.photo_url) {
+        detailPhoto.src = m.photo_url;
+        photoContainer.classList.remove('hidden');
+      } else {
+        photoContainer.classList.add('hidden');
+      }
+
+      document.getElementById('modal-machine-details').classList.remove('hidden');
+    }
+
+    function closeMachineDetails() { document.getElementById('modal-machine-details').classList.add('hidden'); }
+
+    function printMachineTicket() {
+      window.print();
+    }
+
+    function openMachineModal() {
+      document.getElementById('edit-machine-id').value = '';
+      document.getElementById('machine-code').value = '';
+      document.getElementById('machine-model').value = '';
+      document.getElementById('machine-notes').value = '';
+      document.querySelectorAll('input[name="peripherals"]').forEach(chk => chk.checked = false);
+      document.getElementById('modal-machine-title').innerText = 'Cadastrar Máquina';
+      removeCapturedPhoto();
+      stopScanner();
+      document.getElementById('modal-machine').classList.remove('hidden');
+    }
+
+    function closeMachineModal() {
+      stopScanner();
+      document.getElementById('modal-machine').classList.add('hidden');
+    }
+
+    function editMachine(id) {
+      const m = machines.find(item => item.id === id);
+      if (!m) return;
+
+      document.getElementById('edit-machine-id').value = m.id;
+      document.getElementById('machine-code').value = m.code;
+      document.getElementById('machine-model').value = m.model || '';
+      document.getElementById('machine-status').value = m.status || 'Operacional';
+      document.getElementById('machine-notes').value = m.notes || '';
+      
+      document.querySelectorAll('input[name="peripherals"]').forEach(chk => {
+        chk.checked = m.peripherals && m.peripherals.includes(chk.value);
+      });
+
+      document.getElementById('modal-machine-title').innerText = 'Editar Máquina';
+
+      if (m.photo_url) {
+        currentBase64Photo = m.photo_url;
+        document.getElementById('photo-preview').src = m.photo_url;
+        document.getElementById('photo-preview-container').classList.remove('hidden');
+        document.getElementById('photo-label-text').innerText = 'Trocar Foto';
+      } else { removeCapturedPhoto(); }
+
+      document.getElementById('modal-machine').classList.remove('hidden');
+    }
+
+    function handlePhotoUpload(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          currentBase64Photo = canvas.toDataURL('image/jpeg', 0.7);
+          document.getElementById('photo-preview').src = currentBase64Photo;
+          document.getElementById('photo-preview-container').classList.remove('hidden');
+          document.getElementById('photo-label-text').innerText = 'Trocar Foto';
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeCapturedPhoto() {
+      currentBase64Photo = null;
+      document.getElementById('machine-photo').value = '';
+      document.getElementById('photo-preview').src = '';
+      document.getElementById('photo-preview-container').classList.add('hidden');
+      document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
+    }
+
+    function startScanner() {
+      document.getElementById('scanner-container').classList.remove('hidden');
+      if(html5QrcodeScanner) stopScanner();
+      try {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 220 }, (text) => {
+          document.getElementById('machine-code').value = text;
+          stopScanner();
+        }, () => {}).catch(() => stopScanner());
+      } catch(e) {
+        console.error("Erro no scanner:", e);
+      }
+    }
+
+    function stopScanner() {
+      if(html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); }).catch(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); });
+      } else { document.getElementById('scanner-container').classList.add('hidden'); }
+    }
+
+    async function saveMachine(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-machine-id').value;
+      const code = document.getElementById('machine-code').value.trim();
+      const model = document.getElementById('machine-model').value.trim();
+      const status = document.getElementById('machine-status').value;
+      const notes = document.getElementById('machine-notes').value.trim();
+      
+      const peripherals = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
+
+      if(!code) return;
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+      const currentTimestamp = Date.now();
+
+      if (editId) {
+        const m = machines.find(item => item.id === editId);
+        if(m) {
+          m.code = code;
+          m.model = model;
+          m.status = status;
+          m.peripherals = peripherals;
+          m.notes = notes;
+          if(currentBase64Photo) m.photo_url = currentBase64Photo;
+        }
+        try {
+          if(supabaseClient) await supabaseClient.from('machines').update({ code, model, status, peripherals, notes, photo_url: currentBase64Photo }).eq('id', editId);
+        } catch(e){}
+        await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
+      } else {
+        const ticketNumber = String(machines.length + 1).padStart(3, '0');
+        const ticket = `TCK-${ticketNumber}`;
+
+        const machineId = 'mac_' + currentTimestamp;
+        const newMachine = {
+          id: machineId,
+          sector_id: currentSectorId,
+          ticket, code, model, status, peripherals, notes,
+          photo_url: currentBase64Photo,
+          date: dateStr,
+          timestamp: currentTimestamp
+        };
+        machines.push(newMachine);
+        try {
+          if(supabaseClient) await supabaseClient.from('machines').insert([newMachine]);
+        } catch(e){}
+        await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
+      }
+
+      localStorage.setItem('reg_machines', JSON.stringify(machines));
+      closeMachineModal();
+      openSectorItems(currentSectorId);
+    }
+
+    async function deleteMachine(id) {
+      if(confirm("Remover esta máquina?")) {
+        machines = machines.filter(m => m.id !== id);
+        localStorage.setItem('reg_machines', JSON.stringify(machines));
+        try {
+          if(supabaseClient) await supabaseClient.from('machines').delete().eq('id', id);
+        } catch(e){}
+        await logAuditAction("Excluiu Máquina", `ID: ${id}`);
+        openSectorItems(currentSectorId);
+      }
+    }
+
+    function openImageView(src, title) {
+      document.getElementById('full-size-image').src = src;
+      document.getElementById('image-modal-title').innerText = title;
+      document.getElementById('modal-image-view').classList.remove('hidden');
+    }
+    function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
+
+    // EXPORTAÇÃO EM FORMATO TSV (EXCEL)
+    function openExportModal() {
+      if (sectors.length === 0) { alert("Não existem setores cadastrados para exportar."); return; }
+      const container = document.getElementById('export-sectors-checkboxes');
+      if(!container) return;
+      container.innerHTML = '';
+      sectors.forEach(sec => {
+        const div = document.createElement('label');
+        div.className = "flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded";
+        div.innerHTML = `
+          <input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+          <span class="font-medium text-slate-700">${sec.name}</span>
+        `;
+        container.appendChild(div);
+      });
+      document.getElementById('modal-export').classList.remove('hidden');
+    }
+
+    function closeExportModal() { document.getElementById('modal-export').classList.add('hidden'); }
+    function toggleSelectAllExport(status) {
+      document.querySelectorAll('input[name="export-sector-chk"]').forEach(chk => chk.checked = status);
+    }
+
+    function generateAndDownloadCSV() {
+      const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]:checked');
+      const selectedSectorIds = Array.from(checkboxes).map(chk => chk.value);
+      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos uma pasta/setor."); return; }
+      
+      const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
+      
+      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimônio/Código\tModelo/Tipo\tEstado\tPeriféricos\tObservações\tData de Cadastro\n";
+      
+      filteredMachines.forEach(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        const sectorName = sec ? sec.name.replace(/\t/g, ' ') : "Geral";
+        const ticket = (m.ticket || '-').replace(/\t/g, ' ');
+        const perfStr = m.peripherals ? m.peripherals.join(', ') : '-';
+        const code = (m.code || '-').replace(/\t/g, ' ');
+        const model = (m.model || '-').replace(/\t/g, ' ');
+        const status = (m.status || '-').replace(/\t/g, ' ');
+        const notes = (m.notes || '-').replace(/[\t\n]/g, ' ');
+        const date = (m.date || '-').replace(/\t/g, ' ');
+
+        fileContent += `${sectorName}\t${ticket}\t${code}\t${model}\t${status}\t${perfStr}\t${notes}\t${date}\n`;
+      });
+
+      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.xls`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      closeExportModal();
+    }
+
+    async function loadAuditLogs() {
+      const container = document.getElementById('audit-logs-list');
+      if(!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
+      let data = [];
+      try {
+        if(supabaseClient) {
+          const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+          data = res.data;
+        }
+      } catch(e){}
+      
+      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
+      container.innerHTML = '';
+      data.forEach(log => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
+        item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
+        container.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
