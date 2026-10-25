@@ -383,6 +383,7 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
     
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpWQ--j46vOXjlRuXD96xQiIWuvgd9kVEW6ap32rG_o8NnkTjpPlu5psLHgWwAhUnR/exec";
+    const GOOGLE_SHEET_URL = "https://script.google.com/d/11XI6-HHEFoF4rYDjXc1ELZguALpOhI4SNiL1fIjQu50fjrC1ZGc2COOh/edit?usp=drivesdk";
 
     let supabaseClient = null;
     try {
@@ -399,26 +400,10 @@
     let html5QrcodeScanner = null;
     let currentUser = null;
 
-    try {
-      const savedUser = localStorage.getItem('reg_current_user');
-      if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
-        currentUser = JSON.parse(savedUser);
-      } else {
-        localStorage.removeItem('reg_current_user');
-      }
-    } catch (e) {
-      localStorage.removeItem('reg_current_user');
-    }
+    localStorage.removeItem('reg_current_user');
 
     window.onload = async () => {
-      if (currentUser && currentUser.username) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('current-user-display').innerText = currentUser.username;
-        document.getElementById('current-role-display').innerText = currentUser.role === 'admin' ? 'Administrador Mestre' : 'Técnico';
-        await loadDataFromCloud();
-      } else {
-        document.getElementById('login-screen').classList.remove('hidden');
-      }
+      document.getElementById('login-screen').classList.remove('hidden');
     };
 
     async function handleLogin(e) {
@@ -439,7 +424,7 @@
         }
 
         if (!data || data.length === 0) {
-          alert("Utilizador ou senha incorretos! Verifique se a tabela 'users' tem dados.");
+          alert("Utilizador ou senha incorretos!");
           return;
         }
 
@@ -1039,7 +1024,11 @@
         await logAuditAction("Sincronizou Sheets", `Sincronizados ${machinesToSync.length} itens para o Google Sheets.`);
         closeExportModal();
         if (currentSectorId) renderMachines();
-        alert("Planilha online atualizada com sucesso!");
+        
+        // Pergunta se deseja abrir a planilha online imediatamente
+        if (confirm("Planilha online atualizada com sucesso!\nDeseja abrir a planilha do Google Sheets agora?")) {
+          window.open(GOOGLE_SHEET_URL, '_blank');
+        }
       } catch (err) {
         alert("Erro ao conectar com o Google Sheets: " + err.message);
       } finally {
