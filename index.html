@@ -217,4 +217,30 @@
   </nav>
 
   <!-- MODAL: EXPORTAÇÃO CSV -->
-  <div id="
+  <div id="modal-export" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
+        <h3 class="font-bold text-emerald-800 text-sm"><i class="fa-solid fa-file-excel mr-1.5"></i> Exportar Relatório Excel</h3>
+        <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-2">Selecionar Pastas/Setores para incluir:</label>
+          <div class="flex gap-2 mb-3">
+            <button type="button" onclick="toggleSelectAllExport(true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold">Marcar Todos</button>
+            <button type="button" onclick="toggleSelectAllExport(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-semibold">Desmarcar Todos</button>
+          </div>
+          <div id="export-sectors-checkboxes" class="space-y-2 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto bg-slate-50"></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end gap-2">
+        <button type="button" onclick="closeExportModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+        <button type="button" onclick="generateAndDownloadCSV()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-download"></i> Baixar Planilha (Excel)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MACHINE DETAILS & PRINT TICKET -->
+  <div id="modal-machine-details" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4
