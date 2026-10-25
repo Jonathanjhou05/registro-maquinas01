@@ -28,6 +28,49 @@
 </head>
 <body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
 
+  <!-- LOGIN VIEW (Tela de Autenticação Inicial) -->
+  <div id="view-login" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden p-6 space-y-6">
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
+          <i class="fa-solid fa-desktop"></i>
+        </div>
+        <h2 class="font-bold text-slate-800 text-lg">Registo de Máquinas</h2>
+        <p class="text-xs text-slate-500">Entre com as suas credenciais para aceder ao sistema</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Utilizador</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-user"></i></span>
+            <input type="text" id="login-username" required placeholder="Ex: admin" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
+            <input type="password" id="login-password" required placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <div id="login-error" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2 rounded-lg border border-red-100">
+          Utilizador ou senha incorretos.
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl shadow-md transition">
+          Entrar no Sistema
+        </button>
+      </form>
+
+      <div class="text-center text-[10px] text-slate-400">
+        Predefinido: admin / admin (ou crie utilizadores no painel ADM)
+      </div>
+    </div>
+  </div>
+
   <!-- HEADER -->
   <header class="bg-blue-600 text-white shadow-md flex-none px-4 py-3 flex items-center justify-between z-10">
     <div class="flex items-center gap-3">
@@ -111,9 +154,10 @@
 
     <!-- VIEW 3: ADMIN / AUDIT LOGS & USER MANAGEMENT -->
     <section id="view-admin" class="hidden space-y-4">
-      <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
+      <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center hidden">
         <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
-        <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Mestre</h3>
+        <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Administrador</h3>
+        <p class="text-xs text-slate-500 mt-1">Apenas contas com perfil ADMIN podem gerenciar utilizadores e auditorias.</p>
       </div>
 
       <div id="admin-panel" class="space-y-4">
@@ -141,8 +185,8 @@
         <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2">
           <i class="fa-solid fa-user-shield text-blue-600"></i> Sessão Atual
         </h3>
-        <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700">Administrador</strong></p>
-        <p class="text-xs text-slate-600">Perfil: <strong id="current-role-display" class="uppercase text-slate-700">ADMIN</strong></p>
+        <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700">-</strong></p>
+        <p class="text-xs text-slate-600">Perfil: <strong id="current-role-display" class="uppercase text-slate-700">-</strong></p>
         <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs py-2.5 px-3 rounded-lg border border-red-200 mt-2">
           <i class="fa-solid fa-right-from-bracket mr-1"></i> Terminar Sessão (Logout)
         </button>
@@ -409,49 +453,99 @@
       console.error("Erro ao iniciar Supabase:", e);
     }
 
-    // Carregamento ultraseguro com try...catch para evitar qualquer congelamento por dados corrompidos
     let sectors = [];
     let machines = [];
-
-    try {
-      sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
-    } catch (e) {
-      sectors = [];
-    }
-
-    try {
-      machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
-    } catch (e) {
-      machines = [];
-    }
+    try { sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]'); } catch (e) { sectors = []; }
+    try { machines = JSON.parse(localStorage.getItem('reg_machines') || '[]'); } catch (e) { machines = []; }
     
     if (!sectors || !Array.isArray(sectors) || sectors.length === 0) {
       sectors = [{ id: 'sec_default', name: 'Geral / TI' }];
       try { localStorage.setItem('reg_sectors', JSON.stringify(sectors)); } catch(e){}
     }
 
-    let usersList = [];
+    let usersList = [
+      { id: 'usr_admin', username: 'admin', password: 'admin', role: 'admin' }
+    ];
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
     let currentBase64Photo = null;
     let html5QrcodeScanner = null;
-    let currentUser = { id: 'usr_admin', username: 'admin', role: 'admin' };
+    let currentUser = null;
 
     window.onload = () => {
       try {
-        renderSectors();
-        syncWithCloudInBackground();
+        // Verificar se já há sessão ativa no navegador
+        const savedUser = sessionStorage.getItem('reg_current_user');
+        if (savedUser) {
+          currentUser = JSON.parse(savedUser);
+          document.getElementById('view-login').classList.add('hidden');
+          initApp();
+        } else {
+          document.getElementById('view-login').classList.remove('hidden');
+        }
       } catch (err) {
         console.error("Erro no carregamento:", err);
       }
     };
 
+    async function handleLogin(e) {
+      e.preventDefault();
+      const usernameInput = document.getElementById('login-username').value.trim();
+      const passwordInput = document.getElementById('login-password').value.trim();
+      const errorBox = document.getElementById('login-error');
+
+      // Tentar carregar utilizadores do Supabase ou usar o padrão local
+      let foundUser = usersList.find(u => u.username === usernameInput && u.password === passwordInput);
+
+      if (!foundUser && supabaseClient) {
+        try {
+          const { data } = await supabaseClient.from('users').select('*').eq('username', usernameInput).eq('password', passwordInput);
+          if (data && data.length > 0) {
+            foundUser = data[0];
+          }
+        } catch(err) {}
+      }
+
+      // Fallback para admin direto caso o input seja admin/admin
+      if (!foundUser && usernameInput === 'admin' && passwordInput === 'admin') {
+        foundUser = { id: 'usr_admin', username: 'admin', role: 'admin' };
+      }
+
+      if (foundUser) {
+        currentUser = foundUser;
+        sessionStorage.setItem('reg_current_user', JSON.stringify(currentUser));
+        errorBox.classList.add('hidden');
+        document.getElementById('view-login').classList.add('hidden');
+        initApp();
+      } else {
+        errorBox.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      if (confirm("Tem certeza que deseja terminar a sessão?")) {
+        sessionStorage.removeItem('reg_current_user');
+        currentUser = null;
+        location.reload();
+      }
+    }
+
+    function initApp() {
+      renderSectors();
+      syncWithCloudInBackground();
+      
+      // Atualizar dados do utilizador na aba de Ajustes
+      document.getElementById('current-user-display').innerText = currentUser.username;
+      document.getElementById('current-role-display').innerText = currentUser.role.toUpperCase();
+    }
+
     async function syncWithCloudInBackground() {
       if (!supabaseClient) return;
       try {
-        const [secRes, macRes] = await Promise.all([
+        const [secRes, macRes, usrRes] = await Promise.all([
           supabaseClient.from('sectors').select('*'),
-          supabaseClient.from('machines').select('*')
+          supabaseClient.from('machines').select('*'),
+          supabaseClient.from('users').select('*')
         ]);
 
         if (!secRes.error && secRes.data && Array.isArray(secRes.data) && secRes.data.length > 0) {
@@ -461,6 +555,9 @@
         if (!macRes.error && macRes.data && Array.isArray(macRes.data)) {
           machines = macRes.data;
           localStorage.setItem('reg_machines', JSON.stringify(machines));
+        }
+        if (!usrRes.error && usrRes.data && Array.isArray(usrRes.data)) {
+          usersList = usrRes.data;
         }
 
         if(!currentSectorId) renderSectors();
@@ -542,7 +639,7 @@
       try {
         const now = new Date();
         const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-        if(supabaseClient) {
+        if(supabaseClient && currentUser) {
           await supabaseClient.from('audit_logs').insert([{
             id: 'log_' + Date.now(),
             user_action: `[${currentUser.username}] ${action}`,
@@ -586,9 +683,17 @@
     function goBack() { switchTab('sectors'); }
 
     async function checkAdminAccess() {
+      const restrictedBox = document.getElementById('admin-restricted-box');
+      const adminPanel = document.getElementById('admin-panel');
+
       if (currentUser && currentUser.role === 'admin') {
+        restrictedBox.classList.add('hidden');
+        adminPanel.classList.remove('hidden');
         await loadUsersManagement();
         await loadAuditLogs();
+      } else {
+        restrictedBox.classList.remove('hidden');
+        adminPanel.classList.add('hidden');
       }
     }
 
@@ -600,11 +705,10 @@
       try {
         if(supabaseClient) {
           const { data } = await supabaseClient.from('users').select('*');
-          if (data) usersList = data;
+          if (data && data.length > 0) usersList = data;
         }
-      } catch(e) {
-        usersList = [{ id: 'usr_admin', username: 'admin', role: 'admin' }];
-      }
+      } catch(e) {}
+      
       container.innerHTML = '';
       usersList.forEach(u => {
         const item = document.createElement('div');
@@ -636,8 +740,11 @@
       const password = document.getElementById('modal-password').value.trim();
       const role = document.getElementById('modal-role').value;
       const newId = 'usr_' + Date.now();
+      const newUser = { id: newId, username, password, role };
+      
+      usersList.push(newUser);
       try {
-        if(supabaseClient) await supabaseClient.from('users').insert([{ id: newId, username, password, role }]);
+        if(supabaseClient) await supabaseClient.from('users').insert([newUser]);
       } catch(err) {}
       await logAuditAction("Criou Usuário", `Novo utilizador criado: ${username} (${role})`);
       closeUserModal();
@@ -647,6 +754,7 @@
     async function deleteUser(id, username) {
       if (username === 'admin') { alert("Não é possível remover o Administrador principal."); return; }
       if (confirm(`Remover o utilizador ${username}?`)) {
+        usersList = usersList.filter(u => u.id !== id);
         try { if(supabaseClient) await supabaseClient.from('users').delete().eq('id', id); } catch(e){}
         await logAuditAction("Removeu Usuário", `Utilizador removido: ${username}`);
         await loadUsersManagement();
@@ -854,245 +962,4 @@
       document.getElementById('edit-machine-id').value = '';
       document.getElementById('machine-code').value = '';
       document.getElementById('machine-model').value = '';
-      document.getElementById('machine-notes').value = '';
-      document.querySelectorAll('input[name="peripherals"]').forEach(chk => chk.checked = false);
-      document.getElementById('modal-machine-title').innerText = 'Cadastrar Máquina';
-      removeCapturedPhoto();
-      stopScanner();
-      document.getElementById('modal-machine').classList.remove('hidden');
-    }
-
-    function closeMachineModal() {
-      stopScanner();
-      document.getElementById('modal-machine').classList.add('hidden');
-    }
-
-    function editMachine(id) {
-      const m = machines.find(item => item.id === id);
-      if (!m) return;
-
-      document.getElementById('edit-machine-id').value = m.id;
-      document.getElementById('machine-code').value = m.code;
-      document.getElementById('machine-model').value = m.model || '';
-      document.getElementById('machine-status').value = m.status || 'Operacional';
-      document.getElementById('machine-notes').value = m.notes || '';
-      
-      document.querySelectorAll('input[name="peripherals"]').forEach(chk => {
-        chk.checked = m.peripherals && m.peripherals.includes(chk.value);
-      });
-
-      document.getElementById('modal-machine-title').innerText = 'Editar Máquina';
-
-      if (m.photo_url) {
-        currentBase64Photo = m.photo_url;
-        document.getElementById('photo-preview').src = m.photo_url;
-        document.getElementById('photo-preview-container').classList.remove('hidden');
-        document.getElementById('photo-label-text').innerText = 'Trocar Foto';
-      } else { removeCapturedPhoto(); }
-
-      document.getElementById('modal-machine').classList.remove('hidden');
-    }
-
-    function handlePhotoUpload(e) {
-      const file = e.target.files[0];
-      if(!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800;
-          let width = img.width;
-          let height = img.height;
-          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          currentBase64Photo = canvas.toDataURL('image/jpeg', 0.7);
-          document.getElementById('photo-preview').src = currentBase64Photo;
-          document.getElementById('photo-preview-container').classList.remove('hidden');
-          document.getElementById('photo-label-text').innerText = 'Trocar Foto';
-        };
-        img.src = evt.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function removeCapturedPhoto() {
-      currentBase64Photo = null;
-      document.getElementById('machine-photo').value = '';
-      document.getElementById('photo-preview').src = '';
-      document.getElementById('photo-preview-container').classList.add('hidden');
-      document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
-    }
-
-    function startScanner() {
-      document.getElementById('scanner-container').classList.remove('hidden');
-      if(html5QrcodeScanner) stopScanner();
-      try {
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 220 }, (text) => {
-          document.getElementById('machine-code').value = text;
-          stopScanner();
-        }, () => {}).catch(() => stopScanner());
-      } catch(e) {
-        console.error("Erro no scanner:", e);
-      }
-    }
-
-    function stopScanner() {
-      if(html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); }).catch(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); });
-      } else { document.getElementById('scanner-container').classList.add('hidden'); }
-    }
-
-    async function saveMachine(e) {
-      e.preventDefault();
-      const editId = document.getElementById('edit-machine-id').value;
-      const code = document.getElementById('machine-code').value.trim();
-      const model = document.getElementById('machine-model').value.trim();
-      const status = document.getElementById('machine-status').value;
-      const notes = document.getElementById('machine-notes').value.trim();
-      
-      const peripherals = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
-
-      if(!code) return;
-
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-      const currentTimestamp = Date.now();
-
-      if (editId) {
-        const m = machines.find(item => item.id === editId);
-        if(m) {
-          m.code = code;
-          m.model = model;
-          m.status = status;
-          m.peripherals = peripherals;
-          m.notes = notes;
-          if(currentBase64Photo) m.photo_url = currentBase64Photo;
-        }
-        try {
-          if(supabaseClient) await supabaseClient.from('machines').update({ code, model, status, peripherals, notes, photo_url: currentBase64Photo }).eq('id', editId);
-        } catch(e){}
-        await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
-      } else {
-        const machineId = 'mac_' + currentTimestamp;
-        const newMachine = {
-          id: machineId,
-          sector_id: currentSectorId,
-          code, model, status, peripherals, notes,
-          photo_url: currentBase64Photo,
-          date: dateStr,
-          timestamp: currentTimestamp
-        };
-        machines.push(newMachine);
-        try {
-          if(supabaseClient) await supabaseClient.from('machines').insert([newMachine]);
-        } catch(e){}
-        await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code}`);
-      }
-
-      localStorage.setItem('reg_machines', JSON.stringify(machines));
-      closeMachineModal();
-      openSectorItems(currentSectorId);
-    }
-
-    async function deleteMachine(id) {
-      if(confirm("Remover esta máquina?")) {
-        machines = machines.filter(m => m.id !== id);
-        localStorage.setItem('reg_machines', JSON.stringify(machines));
-        try {
-          if(supabaseClient) await supabaseClient.from('machines').delete().eq('id', id);
-        } catch(e){}
-        await logAuditAction("Excluiu Máquina", `ID: ${id}`);
-        openSectorItems(currentSectorId);
-      }
-    }
-
-    function openImageView(src, title) {
-      document.getElementById('full-size-image').src = src;
-      document.getElementById('image-modal-title').innerText = title;
-      document.getElementById('modal-image-view').classList.remove('hidden');
-    }
-    function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
-
-    // EXPORTAÇÃO NATIVA CSV
-    function openExportModal() {
-      if (sectors.length === 0) { alert("Não existem setores cadastrados para exportar."); return; }
-      const container = document.getElementById('export-sectors-checkboxes');
-      if(!container) return;
-      container.innerHTML = '';
-      sectors.forEach(sec => {
-        const div = document.createElement('label');
-        div.className = "flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded";
-        div.innerHTML = `
-          <input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-          <span class="font-medium text-slate-700">${sec.name}</span>
-        `;
-        container.appendChild(div);
-      });
-      document.getElementById('modal-export').classList.remove('hidden');
-    }
-
-    function closeExportModal() { document.getElementById('modal-export').classList.add('hidden'); }
-    function toggleSelectAllExport(status) {
-      document.querySelectorAll('input[name="export-sector-chk"]').forEach(chk => chk.checked = status);
-    }
-
-    function generateAndDownloadCSV() {
-      const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]:checked');
-      const selectedSectorIds = Array.from(checkboxes).map(chk => chk.value);
-      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos uma pasta/setor."); return; }
-      
-      const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
-      let csvContent = "\uFEFFSetor;Patrimônio/Código;Modelo/Tipo;Estado;Periféricos;Observações;Data de Cadastro\n";
-      filteredMachines.forEach(m => {
-        const sec = sectors.find(s => s.id === m.sector_id);
-        const sectorName = sec ? sec.name.replace(/;/g, ',') : "Geral";
-        const perfStr = m.peripherals ? m.peripherals.join(', ') : '-';
-        csvContent += `"${sectorName}";"${m.code}";"${m.model || '-'}";"${m.status}";"${perfStr}";"${(m.notes || '-').replace(/\n/g, ' ')}";"${m.date}"\n`;
-      });
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      closeExportModal();
-    }
-
-    async function loadAuditLogs() {
-      const container = document.getElementById('audit-logs-list');
-      if(!container) return;
-      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
-      let data = [];
-      try {
-        if(supabaseClient) {
-          const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
-          data = res.data;
-        }
-      } catch(e){}
-      
-      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
-      container.innerHTML = '';
-      data.forEach(log => {
-        const item = document.createElement('div');
-        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
-        item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
-        container.appendChild(item);
-      });
-    }
-
-    function handleLogout() {
-      if (confirm("Terminar sessão?")) location.reload();
-    }
-  </script>
-</body>
-</html>
+      document
