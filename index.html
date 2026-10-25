@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- HTML5 QR Code Scanner -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <!-- QRCode.js para gerar etiquetas visuais -->
+  <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -86,10 +86,7 @@
       </div>
 
       <div id="sectors-list" class="grid grid-cols-1 gap-3">
-        <div id="loading-box" class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6">
-          <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
-          <p class="text-xs text-slate-500">A carregar dados...</p>
-        </div>
+        <!-- Os setores serão renderizados aqui instantaneamente -->
       </div>
     </section>
 
@@ -367,34 +364,4 @@
       <button onclick="closeImageView()" class="text-white text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="flex-1 flex items-center justify-center p-2">
-      <img id="full-size-image" class="max-h-[80vh] max-w-full object-contain rounded-lg">
-    </div>
-  </div>
-
-  <!-- SUPABASE & APP LOGIC -->
-  <script>
-    const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
-
-    let supabaseClient = null;
-    try {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    } catch (e) {
-      console.error("Erro ao iniciar Supabase:", e);
-    }
-
-    let sectors = [];
-    let machines = [];
-    let usersList = [];
-    let currentSectorId = null;
-    let currentBase64Photo = null;
-    let html5QrcodeScanner = null;
-    let currentUser = { id: 'usr_admin', username: 'admin', role: 'admin' };
-
-    window.onload = async () => {
-      await loadDataFromCloud();
-    };
-
-    // SISTEMA BLINDADO: TENTA A NUVEM, MAS SE FALHAR OU DEMORAR, CARREGA DO LOCALSTORAGE
-    async function loadDataFromCloud() {
-      try
+      <img id="full-size-image
