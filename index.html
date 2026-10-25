@@ -455,17 +455,25 @@
 
     let sectors = [];
     let machines = [];
+    let usersList = [];
+
     try { sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]'); } catch (e) { sectors = []; }
     try { machines = JSON.parse(localStorage.getItem('reg_machines') || '[]'); } catch (e) { machines = []; }
+    try { usersList = JSON.parse(localStorage.getItem('reg_users') || '[]'); } catch (e) { usersList = []; }
     
     if (!sectors || !Array.isArray(sectors) || sectors.length === 0) {
       sectors = [{ id: 'sec_default', name: 'Geral / TI' }];
       try { localStorage.setItem('reg_sectors', JSON.stringify(sectors)); } catch(e){}
     }
 
-    let usersList = [
-      { id: 'usr_admin', username: 'admin', password: 'admin', role: 'admin' }
-    ];
+    // Garantir utilizador admin predefinido se a lista estiver vazia
+    if (!usersList || !Array.isArray(usersList) || usersList.length === 0) {
+      usersList = [
+        { id: 'usr_admin', username: 'admin', password: 'admin', role: 'admin' }
+      ];
+      try { localStorage.setItem('reg_users', JSON.stringify(usersList)); } catch(e){}
+    }
+
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
     let currentBase64Photo = null;
@@ -485,6 +493,7 @@
       } catch (err) {
         document.getElementById('view-login').classList.remove('hidden');
       }
+      syncWithCloudInBackground();
     };
 
     function handleLogin(e) {
@@ -493,6 +502,7 @@
       const passwordInput = document.getElementById('login-password').value.trim();
       const errorBox = document.getElementById('login-error');
 
+      // Validação síncrona imediata contra a lista de utilizadores local atualizada
       let foundUser = usersList.find(u => u.username === usernameInput && u.password === passwordInput);
 
       if (!foundUser && usernameInput === 'admin' && passwordInput === 'admin') {
@@ -520,7 +530,6 @@
 
     function initApp() {
       renderSectors();
-      syncWithCloudInBackground();
       
       const userDisplay = document.getElementById('current-user-display');
       const roleDisplay = document.getElementById('current-role-display');
@@ -545,11 +554,14 @@
           machines = macRes.data;
           localStorage.setItem('reg_machines', JSON.stringify(machines));
         }
-        if (!usrRes.error && usrRes.data && Array.isArray(usrRes.data)) {
+        if (!usrRes.error && usrRes.data && Array.isArray(usrRes.data) && usrRes.data.length > 0) {
           usersList = usrRes.data;
+          localStorage.setItem('reg_users', JSON.stringify(usersList));
         }
 
-        if(!currentSectorId) renderSectors();
+        if(!currentSectorId && !document.getElementById('view-sectors').classList.contains('hidden')) {
+          renderSectors();
+        }
       } catch (err) {
         console.warn("Modo local ativo:", err);
       }
@@ -694,7 +706,10 @@
       try {
         if(supabaseClient) {
           const { data } = await supabaseClient.from('users').select('*');
-          if (data && data.length > 0) usersList = data;
+          if (data && data.length > 0) {
+            usersList = data;
+            localStorage.setItem('reg_users', JSON.stringify(usersList));
+          }
         }
       } catch(e) {}
       
@@ -732,9 +747,12 @@
       const newUser = { id: newId, username, password, role };
       
       usersList.push(newUser);
+      localStorage.setItem('reg_users', JSON.stringify(usersList));
+
       try {
         if(supabaseClient) await supabaseClient.from('users').insert([newUser]);
       } catch(err) {}
+
       await logAuditAction("Criou Usuário", `Novo utilizador criado: ${username} (${role})`);
       closeUserModal();
       await loadUsersManagement();
@@ -744,6 +762,8 @@
       if (username === 'admin') { alert("Não é possível remover o Administrador principal."); return; }
       if (confirm(`Remover o utilizador ${username}?`)) {
         usersList = usersList.filter(u => u.id !== id);
+        localStorage.setItem('reg_users', JSON.stringify(usersList));
+
         try { if(supabaseClient) await supabaseClient.from('users').delete().eq('id', id); } catch(e){}
         await logAuditAction("Removeu Usuário", `Utilizador removido: ${username}`);
         await loadUsersManagement();
@@ -1117,7 +1137,7 @@
     }
     function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
 
-    // EXPORTAÇÃO CORRIGIDA EM FORMATO TSV (ABRE PERFEITO NAS COLUNAS DO EXCEL)
+    // EXPORTAÇÃO EM FORMATO TSV (EXCEL)
     function openExportModal() {
       if (sectors.length === 0) { alert("Não existem setores cadastrados para exportar."); return; }
       const container = document.getElementById('export-sectors-checkboxes');
