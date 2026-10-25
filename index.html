@@ -1,150 +1,34 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Registro de Máquinas - Nuvem</title>
+    async function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('login-user').value.trim();
+      const p = document.getElementById('login-pass').value.trim();
 
-  <!-- PWA Metadata -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RegMáquinas">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2942/2942544.png">
+      try {
+        const { data, error } = await supabaseClient
+          .from('users')
+          .select('*')
+          .eq('username', u)
+          .eq('password', p);
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- HTML5 QR Code Scanner -->
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <!-- Supabase JS Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        if (error) {
+          alert("Erro do Supabase: " + error.message);
+          return;
+        }
 
-  <style>
-    body { -webkit-tap-highlight-color: transparent; }
-  </style>
-</head>
-<body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
+        if (!data || data.length === 0) {
+          alert("Utilizador ou senha incorretos! Verifique se a tabela 'users' tem dados.");
+          return;
+        }
 
-  <!-- LOGIN SCREEN -->
-  <div id="login-screen" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
-      <div class="text-center">
-        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-inner">
-          <i class="fa-solid fa-shield-halved"></i>
-        </div>
-        <h2 class="font-bold text-slate-800 text-lg">RegMáquinas Nuvem</h2>
-        <p class="text-xs text-slate-500">Faça login para continuar</p>
-      </div>
-
-      <form onsubmit="handleLogin(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Usuário</label>
-          <input type="text" id="login-user" required placeholder="Ex: admin ou joao" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
-          <input type="password" id="login-pass" required placeholder="••••••••" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3 rounded-lg shadow-md transition-colors mt-2">
-          Entrar no Sistema
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- HEADER -->
-  <header class="bg-blue-600 text-white shadow-md flex-none px-4 py-3 flex items-center justify-between z-10">
-    <div class="flex items-center gap-3">
-      <button id="btn-back" onclick="goBack()" class="hidden text-white hover:text-blue-100 text-lg">
-        <i class="fa-solid fa-arrow-left"></i>
-      </button>
-      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Sistemas & Setores</h1>
-    </div>
-    <div class="flex items-center gap-2">
-      <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-cloud-arrow-up"></i> Sincronizar Sheets
-      </button>
-    </div>
-  </header>
-
-  <!-- CONTENT CONTAINER -->
-  <main class="flex-1 overflow-y-auto relative p-4 pb-24" id="main-container">
-    
-    <!-- ERROR BANNER -->
-    <div id="error-banner" class="hidden bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-4 text-xs">
-      <p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Aviso:</p>
-      <p id="error-message">Erro ao processar operação.</p>
-    </div>
-
-    <!-- VIEW 1: SECTORS LIST -->
-    <section id="view-sectors" class="space-y-4">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pastas de Setores</span>
-        <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
-          <i class="fa-solid fa-folder-plus"></i> Novo Setor
-        </button>
-      </div>
-
-      <div id="sectors-list" class="grid grid-cols-1 gap-3">
-        <div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6">
-          <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
-          <p class="text-xs text-slate-500">A carregar dados da nuvem...</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 2: ITEMS IN SECTOR -->
-    <section id="view-items" class="hidden space-y-4">
-      <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-        <div>
-          <h2 id="current-sector-title" class="font-bold text-base text-slate-800">Setor</h2>
-          <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registradas</p>
-        </div>
-        <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
-          <i class="fa-solid fa-plus"></i> Cadastrar
-        </button>
-      </div>
-
-      <div id="items-list" class="space-y-3"></div>
-    </section>
-
-    <!-- VIEW 3: ADMIN / AUDIT LOGS & USER MANAGEMENT -->
-    <section id="view-admin" class="hidden space-y-4">
-      <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
-        <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
-        <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Mestre</h3>
-        <p class="text-xs text-slate-500 mt-1">Apenas o usuário Administrador pode gerenciar utilizadores e visualizar auditorias globais.</p>
-      </div>
-
-      <div id="admin-panel" class="hidden space-y-4">
-        <!-- USER CREATION & MANAGEMENT CARD -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-          <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-users-gear mr-1 text-blue-600"></i> Gerenciar Utilizadores</h3>
-            <button onclick="openUserModal()" class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">+ Novo Usuário</button>
-          </div>
-          <div id="users-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
-        </div>
-
-        <!-- AUDIT LOGS -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-          <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria</h3>
-            <button onclick="loadAuditLogs()" class="text-xs text-blue-600 font-semibold"><i class="fa-solid fa-rotate"></i> Atualizar</button>
-          </div>
-          <div id="audit-logs-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 4: SETTINGS -->
-    <section id="view-settings" class="hidden space-y-4">
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-        <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2">
-          <i class="fa-solid fa-user-shield text-blue-600"></i> Sessão Atual
-        </h3>
-        <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700"></strong></p>
-        <p class="text-xs
+        currentUser = data[0];
+        localStorage.setItem('reg_current_user', JSON.stringify(currentUser));
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('current-user-display').innerText = currentUser.username;
+        document.getElementById('current-role-display').innerText = currentUser.role === 'admin' ? 'Administrador Mestre' : 'Técnico';
+        
+        await logAuditAction("Login", `Utilizador ${currentUser.username} entrou no sistema.`);
+        await loadDataFromCloud();
+      } catch (err) {
+        alert("Erro inesperado no login: " + err.message);
+      }
+    }
