@@ -49,6 +49,26 @@
     <!-- VIEW 1: SECTORS LIST -->
     <section id="view-sectors" class="space-y-4">
       
+      <!-- MELHORIA 2: DASHBOARD DE ESTATÍSTICAS RÁPIDAS -->
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
+          <span id="stat-total" class="font-bold text-blue-700 text-sm">0</span>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativas</span>
+          <span id="stat-operacional" class="font-bold text-emerald-600 text-sm">0</span>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="block text-[10px] text-amber-500 font-semibold uppercase">Manut.</span>
+          <span id="stat-manutencao" class="font-bold text-amber-600 text-sm">0</span>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="block text-[10px] text-red-500 font-semibold uppercase">Defeito</span>
+          <span id="stat-defeito" class="font-bold text-red-600 text-sm">0</span>
+        </div>
+      </div>
+
       <!-- BARRA DE PESQUISA GLOBAL -->
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
@@ -62,9 +82,7 @@
         </button>
       </div>
 
-      <div id="sectors-list" class="grid grid-cols-1 gap-3">
-        <!-- Renderizado de forma instantânea via LocalStorage -->
-      </div>
+      <div id="sectors-list" class="grid grid-cols-1 gap-3"></div>
     </section>
 
     <!-- VIEW 2: ITEMS IN SECTOR -->
@@ -351,7 +369,6 @@
       console.error("Erro ao iniciar Supabase:", e);
     }
 
-    // Carrega IMEDIATAMENTE do armazenamento local para nunca travar a tela
     let sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
     let machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
     let usersList = [];
@@ -369,7 +386,6 @@
       }
     };
 
-    // Sincroniza em segundo plano sem bloquear a interface
     async function syncWithCloudInBackground() {
       if (!supabaseClient) return;
       try {
@@ -393,7 +409,20 @@
       }
     }
 
-    // PESQUISA GLOBAL SEGURA E RÁPIDA
+    // ATUALIZA AS ESTATÍSTICAS DO DASHBOARD
+    function updateDashboardStats() {
+      const total = machines.length;
+      const operacional = machines.filter(m => m.status === 'Operacional').length;
+      const manutencao = machines.filter(m => m.status === 'Manutenção').length;
+      const defeito = machines.filter(m => m.status === 'Defeito').length;
+
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-operacional').innerText = operacional;
+      document.getElementById('stat-manutencao').innerText = manutencao;
+      document.getElementById('stat-defeito').innerText = defeito;
+    }
+
+    // PESQUISA GLOBAL
     function handleGlobalSearch(query) {
       const container = document.getElementById('sectors-list');
       if(!container) return;
@@ -560,6 +589,7 @@
 
     // SECTORS
     function renderSectors() {
+      updateDashboardStats();
       const container = document.getElementById('sectors-list');
       if(!container) return;
       container.innerHTML = '';
