@@ -81,7 +81,7 @@
     </div>
     <div class="flex items-center gap-2">
       <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-file-excel"></i> CSV
+        <i class="fa-solid fa-file-excel"></i> Excel
       </button>
     </div>
   </header>
@@ -215,7 +215,7 @@
   <div id="modal-export" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
-        <h3 class="font-bold text-emerald-800 text-sm"><i class="fa-solid fa-file-excel mr-1.5"></i> Exportar Relatório Planilha</h3>
+        <h3 class="font-bold text-emerald-800 text-sm"><i class="fa-solid fa-file-excel mr-1.5"></i> Exportar Relatório Excel</h3>
         <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
@@ -231,7 +231,7 @@
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end gap-2">
         <button type="button" onclick="closeExportModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
         <button type="button" onclick="generateAndDownloadCSV()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow flex items-center gap-1.5">
-          <i class="fa-solid fa-download"></i> Descarregar Relatório (CSV)
+          <i class="fa-solid fa-download"></i> Baixar Planilha (Excel)
         </button>
       </div>
     </div>
@@ -493,7 +493,6 @@
       const passwordInput = document.getElementById('login-password').value.trim();
       const errorBox = document.getElementById('login-error');
 
-      // Validação síncrona imediata para evitar travamento de rede
       let foundUser = usersList.find(u => u.username === usernameInput && u.password === passwordInput);
 
       if (!foundUser && usernameInput === 'admin' && passwordInput === 'admin') {
@@ -1118,7 +1117,7 @@
     }
     function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
 
-    // EXPORTAÇÃO NATIVA CSV
+    // EXPORTAÇÃO CORRIGIDA EM FORMATO TSV (ABRE PERFEITO NAS COLUNAS DO EXCEL)
     function openExportModal() {
       if (sectors.length === 0) { alert("Não existem setores cadastrados para exportar."); return; }
       const container = document.getElementById('export-sectors-checkboxes');
@@ -1147,19 +1146,27 @@
       if (selectedSectorIds.length === 0) { alert("Selecione pelo menos uma pasta/setor."); return; }
       
       const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
-      let csvContent = "\uFEFFSetor;Patrimônio/Código;Modelo/Tipo;Estado;Periféricos;Observações;Data de Cadastro\n";
+      
+      let fileContent = "\uFEFFSetor\tPatrimônio/Código\tModelo/Tipo\tEstado\tPeriféricos\tObservações\tData de Cadastro\n";
+      
       filteredMachines.forEach(m => {
         const sec = sectors.find(s => s.id === m.sector_id);
-        const sectorName = sec ? sec.name.replace(/;/g, ',') : "Geral";
+        const sectorName = sec ? sec.name.replace(/\t/g, ' ') : "Geral";
         const perfStr = m.peripherals ? m.peripherals.join(', ') : '-';
-        csvContent += `"${sectorName}";"${m.code}";"${m.model || '-'}";"${m.status}";"${perfStr}";"${(m.notes || '-').replace(/\n/g, ' ')}";"${m.date}"\n`;
+        const code = (m.code || '-').replace(/\t/g, ' ');
+        const model = (m.model || '-').replace(/\t/g, ' ');
+        const status = (m.status || '-').replace(/\t/g, ' ');
+        const notes = (m.notes || '-').replace(/[\t\n]/g, ' ');
+        const date = (m.date || '-').replace(/\t/g, ' ');
+
+        fileContent += `${sectorName}\t${code}\t${model}\t${status}\t${perfStr}\t${notes}\t${date}\n`;
       });
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.xls`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
