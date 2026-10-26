@@ -483,6 +483,9 @@
     const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
 
+    // URL DO GOOGLE SHEETS WEBHOOK JÁ INTEGRADA
+    const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw9lgHH8KzxcstDauwyMhihz7BchWhzdU6rL4MJ3Oyo-SX8o1VTDsleIk3-DbkPIJZv/exec";
+
     let supabaseClient = null;
     try {
       if (typeof supabase !== 'undefined') {
@@ -526,14 +529,12 @@
       }
     };
 
-    // SUBSCRIÇÃO EM TEMPO REAL (REALTIME)
     function initRealtimeSubscription() {
       if (!supabaseClient) return;
 
       supabaseClient
         .channel('public-db-changes')
         .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
-          // Atualiza dados silenciosamente em segundo plano quando houver alteração remota
           await loadDataFromServer();
           renderSectors();
           if (currentSectorId) {
@@ -541,6 +542,20 @@
           }
         })
         .subscribe();
+    }
+
+    async function syncToGoogleSheets(dataPayload) {
+      if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
+      try {
+        await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dataPayload)
+        });
+      } catch (e) {
+        console.error("Erro ao sincronizar com Google Sheets:", e);
+      }
     }
 
     function handleLogin(e) {
@@ -1172,7 +1187,7 @@
 
       if(!code) return;
 
-      // VALIDAÇÃO DE DUPLICIDADE (Evita cadastrar patrimônio repetido)
+      // VALIDAÇÃO DE DUPLICIDADE (Impede cadastrar patrimônio que já existe)
       const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase() && m.id !== editId);
       if (existingMachine) {
         const foundSector = sectors.find(s => s.id === existingMachine.sector_id);
@@ -1184,6 +1199,8 @@
       const now = new Date();
       const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
       const currentTimestamp = Date.now();
+      const sec = sectors.find(s => s.id === currentSectorId);
+      const sectorName = sec ? sec.name : 'Geral';
 
       if (editId) {
         const m = machines.find(item => item.id === editId);
@@ -1209,7 +1226,6 @@
         } catch(err){ console.error(err); }
         await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
       } else {
-        const sec = sectors.find(s => s.id === currentSectorId);
         let prefix = "GER";
         if (sec && sec.name) {
           prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
@@ -1245,6 +1261,20 @@
         }
 
         machines.push(newMachine);
+
+        // Dispara a sincronização com a planilha do Google Sheets
+        syncToGoogleSheets({
+          sector: sectorName,
+          ticket: ticket,
+          code: code,
+          model: model,
+          os: os,
+          status: status,
+          peripherals: peripherals.join(', '),
+          notes: notes,
+          date: dateStr
+        });
+
         await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
       }
 
