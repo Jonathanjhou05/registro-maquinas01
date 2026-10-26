@@ -274,6 +274,10 @@
             <span id="detail-model" class="font-medium text-slate-800"></span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Sistema Operacional:</span>
+            <span id="detail-os" class="font-medium text-slate-800"></span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
             <span class="text-slate-500 font-semibold">Estado:</span>
             <span id="detail-status" class="px-2 py-0.5 rounded-full border bg-white font-medium"></span>
           </div>
@@ -395,7 +399,23 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo / Tipo de Equipamento</label>
-          <input type="text" id="machine-model" placeholder="Ex: Dell Optiplex, Impressora FX-250..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="text" id="machine-model" list="model-options" placeholder="Selecione ou digite (Positivo, Dell, Lenovo...)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <datalist id="model-options">
+            <option value="Positivo">
+            <option value="Dell">
+            <option value="Lenovo">
+          </datalist>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Sistema Operacional</label>
+          <select id="machine-os" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="Win10">Windows 10</option>
+            <option value="Win11">Windows 11</option>
+            <option value="Win7">Windows 7</option>
+            <option value="Win8">Windows 8</option>
+            <option value="Linux">Linux</option>
+          </select>
         </div>
 
         <div>
@@ -410,11 +430,14 @@
 
         <!-- PERIFÉRICOS DO CONJUNTO -->
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1.5"><i class="fa-solid fa-boxes-stacked text-blue-600 mr-1"></i> Periféricos do Conjunto</label>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-xs font-semibold text-slate-600"><i class="fa-solid fa-boxes-stacked text-blue-600 mr-1"></i> Periféricos do Conjunto</label>
+            <button type="button" onclick="toggleCompleteMachine()" class="text-[11px] text-blue-600 font-bold hover:underline">⚡ Máquina Completa</button>
+          </div>
           <div class="grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs">
             <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
-              <input type="checkbox" name="peripherals" value="Computador" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-              <span class="font-medium text-slate-700">Computador</span>
+              <input type="checkbox" name="peripherals" value="Gabinete" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+              <span class="font-medium text-slate-700">Gabinete</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
               <input type="checkbox" name="peripherals" value="Monitor" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
@@ -427,10 +450,6 @@
             <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
               <input type="checkbox" name="peripherals" value="Mouse" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
               <span class="font-medium text-slate-700">Mouse</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded col-span-2">
-              <input type="checkbox" name="peripherals" value="Gabinete" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-              <span class="font-medium text-slate-700">Gabinete</span>
             </label>
           </div>
         </div>
@@ -544,7 +563,6 @@
       if (roleDisplay && currentUser) roleDisplay.innerText = currentUser.role.toUpperCase();
     }
 
-    // CARREGAR DIRETAMENTE DO SERVIDOR SUPABASE
     async function loadDataFromServer() {
       if (!supabaseClient) {
         alert("Erro: Ligação com o servidor Supabase não inicializada.");
@@ -568,7 +586,6 @@
           usersList = usrRes.data;
         }
 
-        // Se o servidor estiver vazio, cria o setor padrão na nuvem
         if (sectors.length === 0) {
           const defaultSec = { id: 'sec_default', name: 'Informatica' };
           await supabaseClient.from('sectors').insert([defaultSec]);
@@ -581,14 +598,12 @@
           usersList = [defaultUsr];
         }
 
-        // Atualiza também o backup local do dispositivo
         localStorage.setItem('reg_sectors', JSON.stringify(sectors));
         localStorage.setItem('reg_machines', JSON.stringify(machines));
         localStorage.setItem('reg_users', JSON.stringify(usersList));
 
       } catch (err) {
         console.error("Erro ao carregar dados do servidor:", err);
-        // Fallback local se o servidor estiver inacessível offline
         try {
           sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
           machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
@@ -614,7 +629,6 @@
       if(elDefeito) elDefeito.innerText = defeito;
     }
 
-    // PESQUISA GLOBAL
     function handleGlobalSearch(query) {
       const container = document.getElementById('sectors-list');
       if(!container) return;
@@ -630,6 +644,7 @@
         (m.model && m.model.toLowerCase().includes(q)) || 
         (m.ticket && m.ticket.toLowerCase().includes(q)) ||
         (m.notes && m.notes.toLowerCase().includes(q)) ||
+        (m.os && m.os.toLowerCase().includes(q)) ||
         (m.peripherals && m.peripherals.some(p => p.toLowerCase().includes(q)))
       );
 
@@ -659,6 +674,7 @@
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
               </div>
               <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-slate-400">(${sectorName})</span></p>
+              ${m.os ? `<p class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-laptop mr-1"></i> SO: ${m.os}</p>` : ''}
               ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
               <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
             </div>
@@ -683,7 +699,6 @@
       } catch (e) { console.error("Erro ao gravar log:", e); }
     }
 
-    // NAVIGATION
     function switchTab(tab) {
       document.getElementById('view-sectors').classList.add('hidden');
       document.getElementById('view-items').classList.add('hidden');
@@ -730,7 +745,6 @@
       }
     }
 
-    // USERS MANAGEMENT
     async function loadUsersManagement() {
       const container = document.getElementById('users-list');
       if(!container) return;
@@ -805,7 +819,6 @@
       }
     }
 
-    // SECTORS
     function renderSectors() {
       updateDashboardStats();
       const container = document.getElementById('sectors-list');
@@ -906,13 +919,11 @@
       }
     }
 
-    // MACHINES
     async function openSectorItems(sectorId) {
       currentSectorId = sectorId;
       currentFilterStatus = 'Todos';
       highlightFilterButton('Todos');
       
-      // Sincroniza do servidor antes de abrir a pasta para garantir dados atualizados
       await loadDataFromServer();
 
       const sec = sectors.find(s => s.id === sectorId);
@@ -978,6 +989,7 @@
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
               </div>
               <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'}</p>
+              ${m.os ? `<p class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-laptop mr-1"></i> SO: ${m.os}</p>` : ''}
               ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
               <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
               ${m.notes ? `<p class="text-[11px] text-slate-500 mt-1 line-clamp-1">${m.notes}</p>` : ''}
@@ -1006,6 +1018,7 @@
       document.getElementById('detail-sector').innerText = sectorName;
       document.getElementById('detail-code').innerText = m.code;
       document.getElementById('detail-model').innerText = m.model || 'Não especificado';
+      document.getElementById('detail-os').innerText = m.os || 'Não informado';
       document.getElementById('detail-status').innerText = m.status;
       document.getElementById('detail-peripherals').innerText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum';
       document.getElementById('detail-date').innerText = m.date || 'Não registrada';
@@ -1033,6 +1046,7 @@
       document.getElementById('edit-machine-id').value = '';
       document.getElementById('machine-code').value = '';
       document.getElementById('machine-model').value = '';
+      document.getElementById('machine-os').value = 'Win10';
       document.getElementById('machine-notes').value = '';
       document.querySelectorAll('input[name="peripherals"]').forEach(chk => chk.checked = false);
       document.getElementById('modal-machine-title').innerText = 'Cadastrar Máquina';
@@ -1046,6 +1060,12 @@
       document.getElementById('modal-machine').classList.add('hidden');
     }
 
+    function toggleCompleteMachine() {
+      const checkboxes = document.querySelectorAll('input[name="peripherals"]');
+      const allChecked = Array.from(checkboxes).every(chk => chk.checked);
+      checkboxes.forEach(chk => chk.checked = !allChecked);
+    }
+
     function editMachine(id) {
       const m = machines.find(item => item.id === id);
       if (!m) return;
@@ -1053,6 +1073,7 @@
       document.getElementById('edit-machine-id').value = m.id;
       document.getElementById('machine-code').value = m.code;
       document.getElementById('machine-model').value = m.model || '';
+      document.getElementById('machine-os').value = m.os || 'Win10';
       document.getElementById('machine-status').value = m.status || 'Operacional';
       document.getElementById('machine-notes').value = m.notes || '';
       
@@ -1128,12 +1149,12 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
-    // SALVAMENTO DIRETO NA BASE DE DADOS DO SERVIDOR (SUPABASE)
     async function saveMachine(e) {
       e.preventDefault();
       const editId = document.getElementById('edit-machine-id').value;
       const code = document.getElementById('machine-code').value.trim();
       const model = document.getElementById('machine-model').value.trim();
+      const os = document.getElementById('machine-os').value;
       const status = document.getElementById('machine-status').value;
       const notes = document.getElementById('machine-notes').value.trim();
       
@@ -1150,6 +1171,7 @@
         if(m) {
           m.code = code;
           m.model = model;
+          m.os = os;
           m.status = status;
           m.peripherals = peripherals;
           m.notes = notes;
@@ -1158,7 +1180,7 @@
         try {
           if(supabaseClient) {
             const { error } = await supabaseClient.from('machines').update({ 
-              code, model, status, peripherals, notes, photo_url: currentBase64Photo 
+              code, model, os, status, peripherals, notes, photo_url: currentBase64Photo 
             }).eq('id', editId);
             if(error) {
               alert("Erro ao atualizar no servidor: " + error.message);
@@ -1183,7 +1205,7 @@
         const newMachine = {
           id: machineId,
           sector_id: currentSectorId,
-          ticket, code, model, status, peripherals, notes,
+          ticket, code, model, os, status, peripherals, notes,
           photo_url: currentBase64Photo,
           date: dateStr,
           timestamp: currentTimestamp
@@ -1193,7 +1215,7 @@
           if(supabaseClient) {
             const { error } = await supabaseClient.from('machines').insert([newMachine]);
             if(error) {
-              alert("Erro ao salvar no servidor (verifique as tabelas do Supabase): " + error.message);
+              alert("Erro ao salvar no servidor (adicione a coluna 'os' se necessário na tabela machines): " + error.message);
               return;
             }
           }
@@ -1207,7 +1229,6 @@
         await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
       }
 
-      // Atualiza o armazenamento local de apoio
       localStorage.setItem('reg_machines', JSON.stringify(machines));
       closeMachineModal();
       await openSectorItems(currentSectorId);
@@ -1234,7 +1255,6 @@
     }
     function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
 
-    // EXPORTAÇÃO EM FORMATO TSV (EXCEL)
     function openExportModal() {
       if (sectors.length === 0) { alert("Não existem setores cadastrados para exportar."); return; }
       const container = document.getElementById('export-sectors-checkboxes');
@@ -1259,59 +1279,4 @@
 
     function generateAndDownloadCSV() {
       const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]:checked');
-      const selectedSectorIds = Array.from(checkboxes).map(chk => chk.value);
-      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos uma pasta/setor."); return; }
-      
-      const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
-      
-      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimônio/Código\tModelo/Tipo\tEstado\tPeriféricos\tObservações\tData de Cadastro\n";
-      
-      filteredMachines.forEach(m => {
-        const sec = sectors.find(s => s.id === m.sector_id);
-        const sectorName = sec ? sec.name.replace(/\t/g, ' ') : "Geral";
-        const ticket = (m.ticket || '-').replace(/\t/g, ' ');
-        const perfStr = m.peripherals ? m.peripherals.join(', ') : '-';
-        const code = (m.code || '-').replace(/\t/g, ' ');
-        const model = (m.model || '-').replace(/\t/g, ' ');
-        const status = (m.status || '-').replace(/\t/g, ' ');
-        const notes = (m.notes || '-').replace(/[\t\n]/g, ' ');
-        const date = (m.date || '-').replace(/\t/g, ' ');
-
-        fileContent += `${sectorName}\t${ticket}\t${code}\t${model}\t${status}\t${perfStr}\t${notes}\t${date}\n`;
-      });
-
-      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.xls`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      closeExportModal();
-    }
-
-    async function loadAuditLogs() {
-      const container = document.getElementById('audit-logs-list');
-      if(!container) return;
-      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
-      let data = [];
-      try {
-        if(supabaseClient) {
-          const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
-          data = res.data;
-        }
-      } catch(e){}
-      
-      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
-      container.innerHTML = '';
-      data.forEach(log => {
-        const item = document.createElement('div');
-        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
-        item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
-        container.appendChild(item);
-      });
-    }
-  </script>
-</body>
-</html>
+      const selectedSectorIds = Array.from(checkbox
