@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Registro de Máquinas - Nuvem</title>
+  <title>Registro de Máquinas - Nuvem & Offline</title>
 
   <!-- PWA Metadata -->
   <link rel="manifest" href="manifest.json">
@@ -32,6 +32,11 @@
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
+
+  <!-- INDICADOR DE ESTADO DE CONEXÃO -->
+  <div id="offline-banner" class="hidden bg-amber-500 text-white text-[11px] font-semibold text-center py-1 px-2 flex items-center justify-center gap-1.5 flex-none z-30 shadow-inner">
+    <i class="fa-solid fa-triangle-exclamation"></i> Você está offline. As alterações serão salvas localmente e sincronizadas quando a conexão voltar.
+  </div>
 
   <!-- LOGIN VIEW -->
   <div id="view-login" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
@@ -483,7 +488,6 @@
     const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
 
-    // URL DO GOOGLE SHEETS WEBHOOK JÁ INTEGRADA
     const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw9lgHH8KzxcstDauwyMhihz7BchWhzdU6rL4MJ3Oyo-SX8o1VTDsleIk3-DbkPIJZv/exec";
 
     let supabaseClient = null;
@@ -498,6 +502,7 @@
     let sectors = [];
     let machines = [];
     let usersList = [];
+    let offlineQueue = [];
 
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
@@ -506,8 +511,14 @@
     let currentUser = null;
 
     window.onload = async () => {
+      loadOfflineQueueFromStorage();
+      setupNetworkListeners();
       await loadDataFromServer();
       initRealtimeSubscription();
+
+      if (navigator.onLine) {
+        syncOfflineQueue();
+      }
 
       try {
         const savedUser = sessionStorage.getItem('reg_current_user');
@@ -529,6 +540,70 @@
       }
     };
 
+    // MONITORIZAR ESTADO DA REDE (ONLINE / OFFLINE)
+    function setupNetworkListeners() {
+      window.addEventListener('online', () => {
+        document.getElementById('offline-banner').classList.add('hidden');
+        syncOfflineQueue();
+      });
+
+      window.addEventListener('offline', () => {
+        document.getElementById('offline-banner').classList.remove('hidden');
+      });
+
+      if (!navigator.onLine) {
+        document.getElementById('offline-banner').classList.remove('hidden');
+      }
+    }
+
+    function loadOfflineQueueFromStorage() {
+      try {
+        offlineQueue = JSON.parse(localStorage.getItem('reg_offline_queue') || '[]');
+      } catch(e) { offlineQueue = []; }
+    }
+
+    function saveOfflineQueueToStorage() {
+      localStorage.setItem('reg_offline_queue', JSON.stringify(offlineQueue));
+    }
+
+    // SINCRONIZAR FILA OFFLINE QUANDO A INTERNET VOLTA
+    async function syncOfflineQueue() {
+      if (!navigator.onLine || offlineQueue.length === 0 || !supabaseClient) return;
+
+      const queueCopy = [...offlineQueue];
+      let syncedCount = 0;
+
+      for (const item of queueCopy) {
+        try {
+          if (item.type === 'INSERT_MACHINE') {
+            const { error } = await supabaseClient.from('machines').insert([item.payload]);
+            if (!error) {
+              syncToGoogleSheets(item.sheetPayload);
+              syncedCount++;
+            }
+          } else if (item.type === 'UPDATE_MACHINE') {
+            const { error } = await supabaseClient.from('machines').update(item.payload).eq('id', item.id);
+            if (!error) syncedCount++;
+          } else if (item.type === 'DELETE_MACHINE') {
+            const { error } = await supabaseClient.from('machines').delete().eq('id', item.id);
+            if (!error) syncedCount++;
+          }
+        } catch (e) {
+          console.error("Erro ao sincronizar item da fila offline:", e);
+        }
+      }
+
+      // Remove itens sincronizados com sucesso da fila
+      offlineQueue = offlineQueue.slice(syncedCount);
+      saveOfflineQueueToStorage();
+
+      if (syncedCount > 0) {
+        await loadDataFromServer();
+        if (currentSectorId) renderMachines();
+        renderSectors();
+      }
+    }
+
     function initRealtimeSubscription() {
       if (!supabaseClient) return;
 
@@ -545,7 +620,7 @@
     }
 
     async function syncToGoogleSheets(dataPayload) {
-      if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
+      if (!GOOGLE_SHEETS_WEBHOOK_URL || !navigator.onLine) return;
       try {
         await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
           method: 'POST',
@@ -598,7 +673,13 @@
     }
 
     async function loadDataFromServer() {
-      if (!supabaseClient) return;
+      try {
+        sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
+        machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
+        usersList = JSON.parse(localStorage.getItem('reg_users') || '[]');
+      } catch(e){}
+
+      if (!supabaseClient || !navigator.onLine) return;
 
       try {
         const [secRes, macRes, usrRes] = await Promise.all([
@@ -628,12 +709,7 @@
         localStorage.setItem('reg_users', JSON.stringify(usersList));
 
       } catch (err) {
-        console.warn("Modo offline ou erro ao carregar dados do servidor:", err);
-        try {
-          sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
-          machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
-          usersList = JSON.parse(localStorage.getItem('reg_users') || '[]');
-        } catch(e){}
+        console.warn("Modo offline ativo - usando dados locais armazenados:", err);
       }
     }
 
@@ -713,7 +789,7 @@
       try {
         const now = new Date();
         const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-        if(supabaseClient && currentUser) {
+        if(supabaseClient && currentUser && navigator.onLine) {
           await supabaseClient.from('audit_logs').insert([{
             id: 'log_' + Date.now(),
             user_action: `[${currentUser.username}] ${action}`,
@@ -775,7 +851,7 @@
       if(!container) return;
       container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando utilizadores...</p>';
       try {
-        if(supabaseClient) {
+        if(supabaseClient && navigator.onLine) {
           const { data } = await supabaseClient.from('users').select('*');
           if (data && data.length > 0) {
             usersList = data;
@@ -821,9 +897,8 @@
       localStorage.setItem('reg_users', JSON.stringify(usersList));
 
       try {
-        if(supabaseClient) {
-          const { error } = await supabaseClient.from('users').insert([newUser]);
-          if(error) alert("Erro ao salvar no servidor: " + error.message);
+        if(supabaseClient && navigator.onLine) {
+          await supabaseClient.from('users').insert([newUser]);
         }
       } catch(err) { console.error(err); }
 
@@ -838,7 +913,7 @@
         usersList = usersList.filter(u => u.id !== id);
         localStorage.setItem('reg_users', JSON.stringify(usersList));
 
-        try { if(supabaseClient) await supabaseClient.from('users').delete().eq('id', id); } catch(e){}
+        try { if(supabaseClient && navigator.onLine) await supabaseClient.from('users').delete().eq('id', id); } catch(e){}
         await logAuditAction("Removeu Usuário", `Utilizador removido: ${username}`);
         await loadUsersManagement();
       }
@@ -896,9 +971,8 @@
         const sec = sectors.find(s => s.id === id);
         if(sec) sec.name = name;
         try {
-          if(supabaseClient) {
-            const { error } = await supabaseClient.from('sectors').update({ name }).eq('id', id);
-            if(error) alert("Erro ao atualizar setor no servidor: " + error.message);
+          if(supabaseClient && navigator.onLine) {
+            await supabaseClient.from('sectors').update({ name }).eq('id', id);
           }
         } catch(e){}
         await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
@@ -907,9 +981,8 @@
         const newSector = { id: newId, name };
         sectors.push(newSector);
         try {
-          if(supabaseClient) {
-            const { error } = await supabaseClient.from('sectors').insert([newSector]);
-            if(error) alert("Erro ao salvar setor no servidor: " + error.message);
+          if(supabaseClient && navigator.onLine) {
+            await supabaseClient.from('sectors').insert([newSector]);
           }
         } catch(e){}
         await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
@@ -935,7 +1008,7 @@
         localStorage.setItem('reg_sectors', JSON.stringify(sectors));
         localStorage.setItem('reg_machines', JSON.stringify(machines));
         try {
-          if(supabaseClient) {
+          if(supabaseClient && navigator.onLine) {
             await supabaseClient.from('sectors').delete().eq('id', id);
           }
         } catch(e){}
@@ -1213,17 +1286,22 @@
           m.notes = notes;
           if(currentBase64Photo) m.photo_url = currentBase64Photo;
         }
+
+        const updatePayload = { code, model, os, status, peripherals, notes, photo_url: currentBase64Photo };
+
         try {
-          if(supabaseClient) {
-            const { error } = await supabaseClient.from('machines').update({ 
-              code, model, os, status, peripherals, notes, photo_url: currentBase64Photo 
-            }).eq('id', editId);
-            if(error) {
-              alert("Erro ao atualizar no servidor: " + error.message);
-              return;
-            }
+          if (supabaseClient && navigator.onLine) {
+            await supabaseClient.from('machines').update(updatePayload).eq('id', editId);
+          } else {
+            offlineQueue.push({ type: 'UPDATE_MACHINE', id: editId, payload: updatePayload });
+            saveOfflineQueueToStorage();
           }
-        } catch(err){ console.error(err); }
+        } catch(err){ 
+          console.error(err);
+          offlineQueue.push({ type: 'UPDATE_MACHINE', id: editId, payload: updatePayload });
+          saveOfflineQueueToStorage();
+        }
+
         await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
       } else {
         let prefix = "GER";
@@ -1245,25 +1323,8 @@
           date: dateStr,
           timestamp: currentTimestamp
         };
-        
-        try {
-          if(supabaseClient) {
-            const { error } = await supabaseClient.from('machines').insert([newMachine]);
-            if(error) {
-              alert("Erro ao salvar no servidor: " + error.message);
-              return;
-            }
-          }
-        } catch(err) {
-          alert("Erro de conexão ao salvar no servidor.");
-          console.error(err);
-          return;
-        }
 
-        machines.push(newMachine);
-
-        // Dispara a sincronização com a planilha do Google Sheets
-        syncToGoogleSheets({
+        const sheetPayload = {
           sector: sectorName,
           ticket: ticket,
           code: code,
@@ -1273,8 +1334,33 @@
           peripherals: peripherals.join(', '),
           notes: notes,
           date: dateStr
-        });
+        };
+        
+        try {
+          if (supabaseClient && navigator.onLine) {
+            const { error } = await supabaseClient.from('machines').insert([newMachine]);
+            if (error) throw error;
+            syncToGoogleSheets(sheetPayload);
+          } else {
+            offlineQueue.push({ 
+              type: 'INSERT_MACHINE', 
+              payload: newMachine, 
+              sheetPayload: sheetPayload 
+            });
+            saveOfflineQueueToStorage();
+            alert("📦 Sem conexão: Máquina salva localmente! Será sincronizada automaticamente quando houver internet.");
+          }
+        } catch(err) {
+          offlineQueue.push({ 
+            type: 'INSERT_MACHINE', 
+            payload: newMachine, 
+            sheetPayload: sheetPayload 
+          });
+          saveOfflineQueueToStorage();
+          alert("📦 Erro de rede: Máquina salva localmente em modo offline.");
+        }
 
+        machines.push(newMachine);
         await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
       }
 
@@ -1288,10 +1374,16 @@
         machines = machines.filter(m => m.id !== id);
         localStorage.setItem('reg_machines', JSON.stringify(machines));
         try {
-          if(supabaseClient) {
+          if(supabaseClient && navigator.onLine) {
             await supabaseClient.from('machines').delete().eq('id', id);
+          } else {
+            offlineQueue.push({ type: 'DELETE_MACHINE', id: id });
+            saveOfflineQueueToStorage();
           }
-        } catch(e){}
+        } catch(e){
+          offlineQueue.push({ type: 'DELETE_MACHINE', id: id });
+          saveOfflineQueueToStorage();
+        }
         await logAuditAction("Excluiu Máquina", `ID: ${id}`);
         openSectorItems(currentSectorId);
       }
@@ -1367,7 +1459,7 @@
       container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
       let data = [];
       try {
-        if(supabaseClient) {
+        if(supabaseClient && navigator.onLine) {
           const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
           data = res.data;
         }
