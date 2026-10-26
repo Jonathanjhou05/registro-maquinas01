@@ -503,7 +503,6 @@
     let machines = [];
     let usersList = [];
     let offlineQueue = [];
-    let sessionMonitorInterval = null;
 
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
@@ -528,7 +527,6 @@
           if (currentUser && currentUser.username) {
             document.getElementById('view-login').classList.add('hidden');
             initApp();
-            startSessionMonitor();
             return;
           }
         }
@@ -536,6 +534,7 @@
         sessionStorage.removeItem('reg_current_user');
       }
 
+      // Se não houver sessão válida, assegura que a tela de login aparece
       document.getElementById('view-login').classList.remove('hidden');
     };
 
@@ -631,8 +630,7 @@
       }
     }
 
-    // LOGIN COM SESSÃO ÚNICA (DERRUBA OUTRAS SESSÕES ATIVAS)
-    async function handleLogin(e) {
+    function handleLogin(e) {
       e.preventDefault();
       const usernameInput = document.getElementById('login-username').value.trim();
       const passwordInput = document.getElementById('login-password').value.trim();
@@ -645,71 +643,18 @@
       }
 
       if (foundUser) {
-        const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        foundUser.session_token = sessionToken;
-
         currentUser = foundUser;
         sessionStorage.setItem('reg_current_user', JSON.stringify(currentUser));
-        localStorage.setItem('reg_active_session_' + foundUser.id, sessionToken);
-
-        if (supabaseClient && navigator.onLine) {
-          try {
-            await supabaseClient.from('users').update({ session_token: sessionToken }).eq('id', foundUser.id);
-          } catch (err) {
-            console.error("Erro ao atualizar token de sessão no servidor:", err);
-          }
-        }
-
         errorBox.classList.add('hidden');
         document.getElementById('view-login').classList.add('hidden');
         initApp();
-        startSessionMonitor();
       } else {
         errorBox.classList.remove('hidden');
       }
     }
 
-    // MONITOR DE SESSÃO (VIGIA SE OUTRO DISPOSITIVO LOGOU COM A MESMA CONTA)
-    function startSessionMonitor() {
-      if (sessionMonitorInterval) clearInterval(sessionMonitorInterval);
-
-      sessionMonitorInterval = setInterval(async () => {
-        if (!currentUser || !currentUser.id) return;
-
-        const localToken = localStorage.getItem('reg_active_session_' + currentUser.id);
-
-        if (supabaseClient && navigator.onLine) {
-          try {
-            const { data } = await supabaseClient
-              .from('users')
-              .select('session_token')
-              .eq('id', currentUser.id)
-              .single();
-
-            if (data && data.session_token) {
-              if (localToken && data.session_token !== localToken) {
-                triggerForceLogout("A sua conta foi acedida noutro dispositivo. Esta sessão foi encerrada.");
-              }
-            }
-          } catch (e) {
-            console.warn("Erro ao monitorizar sessão:", e);
-          }
-        }
-      }, 5000);
-    }
-
-    function triggerForceLogout(reason) {
-      if (sessionMonitorInterval) clearInterval(sessionMonitorInterval);
-      alert(reason || "Sessão encerrada por segurança.");
-      sessionStorage.removeItem('reg_current_user');
-      currentUser = null;
-      document.getElementById('view-login').classList.remove('hidden');
-      document.getElementById('login-password').value = '';
-    }
-
     function handleLogout() {
       if (confirm("Tem certeza que deseja terminar a sessão?")) {
-        if (sessionMonitorInterval) clearInterval(sessionMonitorInterval);
         sessionStorage.removeItem('reg_current_user');
         currentUser = null;
         location.reload();
@@ -1315,6 +1260,7 @@
 
       if(!code) return;
 
+      // VALIDAÇÃO DE DUPLICIDADE (Impede cadastrar patrimônio que já existe)
       const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase() && m.id !== editId);
       if (existingMachine) {
         const foundSector = sectors.find(s => s.id === existingMachine.sector_id);
