@@ -442,7 +442,7 @@
 
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 flex-none">
           <button type="button" onclick="closeMachineModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar Registro</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar no Servidor</button>
         </div>
       </form>
     </div>
@@ -477,35 +477,20 @@
     let machines = [];
     let usersList = [];
 
-    try { sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]'); } catch (e) { sectors = []; }
-    try { machines = JSON.parse(localStorage.getItem('reg_machines') || '[]'); } catch (e) { machines = []; }
-    try { usersList = JSON.parse(localStorage.getItem('reg_users') || '[]'); } catch (e) { usersList = []; }
-    
-    if (!sectors || !Array.isArray(sectors) || sectors.length === 0) {
-      sectors = [{ id: 'sec_default', name: 'Informatica' }];
-      try { localStorage.setItem('reg_sectors', JSON.stringify(sectors)); } catch(e){}
-    }
-
-    if (!usersList || !Array.isArray(usersList) || usersList.length === 0) {
-      usersList = [
-        { id: 'usr_admin', username: 'admin', password: 'admin', role: 'admin' }
-      ];
-      try { localStorage.setItem('reg_users', JSON.stringify(usersList)); } catch(e){}
-    }
-
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
     let currentBase64Photo = null;
     let html5QrcodeScanner = null;
     let currentUser = null;
 
-    window.onload = () => {
+    window.onload = async () => {
       try {
         const savedUser = sessionStorage.getItem('reg_current_user');
         if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
           currentUser = JSON.parse(savedUser);
           if (currentUser && currentUser.username) {
             document.getElementById('view-login').classList.add('hidden');
+            await loadDataFromServer();
             initApp();
           } else {
             sessionStorage.removeItem('reg_current_user');
@@ -518,7 +503,6 @@
         sessionStorage.removeItem('reg_current_user');
         document.getElementById('view-login').classList.remove('hidden');
       }
-      syncWithCloudInBackground();
     };
 
     function handleLogin(e) {
@@ -538,7 +522,7 @@
         sessionStorage.setItem('reg_current_user', JSON.stringify(currentUser));
         errorBox.classList.add('hidden');
         document.getElementById('view-login').classList.add('hidden');
-        initApp();
+        loadDataFromServer().then(() => initApp());
       } else {
         errorBox.classList.remove('hidden');
       }
@@ -554,15 +538,19 @@
 
     function initApp() {
       renderSectors();
-      
       const userDisplay = document.getElementById('current-user-display');
       const roleDisplay = document.getElementById('current-role-display');
       if (userDisplay && currentUser) userDisplay.innerText = currentUser.username;
       if (roleDisplay && currentUser) roleDisplay.innerText = currentUser.role.toUpperCase();
     }
 
-    async function syncWithCloudInBackground() {
-      if (!supabaseClient) return;
+    // CARREGAR DIRETAMENTE DO SERVIDOR SUPABASE
+    async function loadDataFromServer() {
+      if (!supabaseClient) {
+        alert("Erro: Ligação com o servidor Supabase não inicializada.");
+        return;
+      }
+
       try {
         const [secRes, macRes, usrRes] = await Promise.all([
           supabaseClient.from('sectors').select('*'),
@@ -570,24 +558,42 @@
           supabaseClient.from('users').select('*')
         ]);
 
-        if (!secRes.error && secRes.data && Array.isArray(secRes.data) && secRes.data.length > 0) {
+        if (secRes.data && Array.isArray(secRes.data)) {
           sectors = secRes.data;
-          localStorage.setItem('reg_sectors', JSON.stringify(sectors));
         }
-        if (!macRes.error && macRes.data && Array.isArray(macRes.data)) {
+        if (macRes.data && Array.isArray(macRes.data)) {
           machines = macRes.data;
-          localStorage.setItem('reg_machines', JSON.stringify(machines));
         }
-        if (!usrRes.error && usrRes.data && Array.isArray(usrRes.data) && usrRes.data.length > 0) {
+        if (usrRes.data && Array.isArray(usrRes.data)) {
           usersList = usrRes.data;
-          localStorage.setItem('reg_users', JSON.stringify(usersList));
         }
 
-        if(!currentSectorId && !document.getElementById('view-sectors').classList.contains('hidden')) {
-          renderSectors();
+        // Se o servidor estiver vazio, cria o setor padrão na nuvem
+        if (sectors.length === 0) {
+          const defaultSec = { id: 'sec_default', name: 'Informatica' };
+          await supabaseClient.from('sectors').insert([defaultSec]);
+          sectors = [defaultSec];
         }
+
+        if (usersList.length === 0) {
+          const defaultUsr = { id: 'usr_admin', username: 'admin', password: 'admin', role: 'admin' };
+          await supabaseClient.from('users').insert([defaultUsr]);
+          usersList = [defaultUsr];
+        }
+
+        // Atualiza também o backup local do dispositivo
+        localStorage.setItem('reg_sectors', JSON.stringify(sectors));
+        localStorage.setItem('reg_machines', JSON.stringify(machines));
+        localStorage.setItem('reg_users', JSON.stringify(usersList));
+
       } catch (err) {
-        console.warn("Modo local ativo:", err);
+        console.error("Erro ao carregar dados do servidor:", err);
+        // Fallback local se o servidor estiver inacessível offline
+        try {
+          sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
+          machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
+          usersList = JSON.parse(localStorage.getItem('reg_users') || '[]');
+        } catch(e){}
       }
     }
 
@@ -694,7 +700,7 @@
         document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-blue-600";
         document.getElementById('app-title').innerText = "Sistemas & Setores";
         currentSectorId = null;
-        renderSectors();
+        loadDataFromServer().then(() => renderSectors());
       } else if(tab === 'admin') {
         document.getElementById('view-admin').classList.remove('hidden');
         document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
@@ -776,8 +782,11 @@
       localStorage.setItem('reg_users', JSON.stringify(usersList));
 
       try {
-        if(supabaseClient) await supabaseClient.from('users').insert([newUser]);
-      } catch(err) {}
+        if(supabaseClient) {
+          const { error } = await supabaseClient.from('users').insert([newUser]);
+          if(error) alert("Erro ao salvar no servidor: " + error.message);
+        }
+      } catch(err) { console.error(err); }
 
       await logAuditAction("Criou Usuário", `Novo utilizador criado: ${username} (${role})`);
       closeUserModal();
@@ -848,12 +857,23 @@
       if(id) {
         const sec = sectors.find(s => s.id === id);
         if(sec) sec.name = name;
-        try { if(supabaseClient) await supabaseClient.from('sectors').update({ name }).eq('id', id); } catch(e){}
+        try {
+          if(supabaseClient) {
+            const { error } = await supabaseClient.from('sectors').update({ name }).eq('id', id);
+            if(error) alert("Erro ao atualizar setor no servidor: " + error.message);
+          }
+        } catch(e){}
         await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
       } else {
         const newId = 'sec_' + Date.now();
-        sectors.push({ id: newId, name });
-        try { if(supabaseClient) await supabaseClient.from('sectors').insert([{ id: newId, name }]); } catch(e){}
+        const newSector = { id: newId, name };
+        sectors.push(newSector);
+        try {
+          if(supabaseClient) {
+            const { error } = await supabaseClient.from('sectors').insert([newSector]);
+            if(error) alert("Erro ao salvar setor no servidor: " + error.message);
+          }
+        } catch(e){}
         await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
       }
       localStorage.setItem('reg_sectors', JSON.stringify(sectors));
@@ -877,7 +897,9 @@
         localStorage.setItem('reg_sectors', JSON.stringify(sectors));
         localStorage.setItem('reg_machines', JSON.stringify(machines));
         try {
-          if(supabaseClient) await supabaseClient.from('sectors').delete().eq('id', id);
+          if(supabaseClient) {
+            await supabaseClient.from('sectors').delete().eq('id', id);
+          }
         } catch(e){}
         await logAuditAction("Excluiu Setor", `Setor ID: ${id}`);
         renderSectors();
@@ -885,10 +907,14 @@
     }
 
     // MACHINES
-    function openSectorItems(sectorId) {
+    async function openSectorItems(sectorId) {
       currentSectorId = sectorId;
       currentFilterStatus = 'Todos';
       highlightFilterButton('Todos');
+      
+      // Sincroniza do servidor antes de abrir a pasta para garantir dados atualizados
+      await loadDataFromServer();
+
       const sec = sectors.find(s => s.id === sectorId);
       if(!sec) return;
 
@@ -1102,6 +1128,7 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
+    // SALVAMENTO DIRETO NA BASE DE DADOS DO SERVIDOR (SUPABASE)
     async function saveMachine(e) {
       e.preventDefault();
       const editId = document.getElementById('edit-machine-id').value;
@@ -1129,20 +1156,25 @@
           if(currentBase64Photo) m.photo_url = currentBase64Photo;
         }
         try {
-          if(supabaseClient) await supabaseClient.from('machines').update({ code, model, status, peripherals, notes, photo_url: currentBase64Photo }).eq('id', editId);
-        } catch(e){}
+          if(supabaseClient) {
+            const { error } = await supabaseClient.from('machines').update({ 
+              code, model, status, peripherals, notes, photo_url: currentBase64Photo 
+            }).eq('id', editId);
+            if(error) {
+              alert("Erro ao atualizar no servidor: " + error.message);
+              return;
+            }
+          }
+        } catch(err){ console.error(err); }
         await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
       } else {
-        // Obter o nome do setor atual para criar o prefixo (Ex: "Informatica" -> "INFO", "RH" -> "RH")
         const sec = sectors.find(s => s.id === currentSectorId);
         let prefix = "GER";
         if (sec && sec.name) {
-          // Pega as primeiras letras ou o nome limpo em maiúsculas (ex: "RH" ou "INFO")
           prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
           if (!prefix) prefix = "SET";
         }
 
-        // Conta quantas máquinas já existem NESTE setor para numerar sequencialmente (001, 002...)
         const sectorMachinesCount = machines.filter(m => m.sector_id === currentSectorId).length;
         const ticketNumber = String(sectorMachinesCount + 1).padStart(3, '0');
         const ticket = `${prefix}-${ticketNumber}`;
@@ -1156,16 +1188,29 @@
           date: dateStr,
           timestamp: currentTimestamp
         };
-        machines.push(newMachine);
+        
         try {
-          if(supabaseClient) await supabaseClient.from('machines').insert([newMachine]);
-        } catch(e){}
+          if(supabaseClient) {
+            const { error } = await supabaseClient.from('machines').insert([newMachine]);
+            if(error) {
+              alert("Erro ao salvar no servidor (verifique as tabelas do Supabase): " + error.message);
+              return;
+            }
+          }
+        } catch(err) {
+          alert("Erro de conexão ao salvar no servidor.");
+          console.error(err);
+          return;
+        }
+
+        machines.push(newMachine);
         await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
       }
 
+      // Atualiza o armazenamento local de apoio
       localStorage.setItem('reg_machines', JSON.stringify(machines));
       closeMachineModal();
-      openSectorItems(currentSectorId);
+      await openSectorItems(currentSectorId);
     }
 
     async function deleteMachine(id) {
@@ -1173,7 +1218,9 @@
         machines = machines.filter(m => m.id !== id);
         localStorage.setItem('reg_machines', JSON.stringify(machines));
         try {
-          if(supabaseClient) await supabaseClient.from('machines').delete().eq('id', id);
+          if(supabaseClient) {
+            await supabaseClient.from('machines').delete().eq('id', id);
+          }
         } catch(e){}
         await logAuditAction("Excluiu Máquina", `ID: ${id}`);
         openSectorItems(currentSectorId);
