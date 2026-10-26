@@ -502,14 +502,16 @@
     let html5QrcodeScanner = null;
     let currentUser = null;
 
+    // Inicialização segura e assíncrona imediata
     window.onload = async () => {
+      await loadDataFromServer();
+
       try {
         const savedUser = sessionStorage.getItem('reg_current_user');
         if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
           currentUser = JSON.parse(savedUser);
           if (currentUser && currentUser.username) {
             document.getElementById('view-login').classList.add('hidden');
-            await loadDataFromServer();
             initApp();
           } else {
             sessionStorage.removeItem('reg_current_user');
@@ -541,7 +543,7 @@
         sessionStorage.setItem('reg_current_user', JSON.stringify(currentUser));
         errorBox.classList.add('hidden');
         document.getElementById('view-login').classList.add('hidden');
-        loadDataFromServer().then(() => initApp());
+        initApp();
       } else {
         errorBox.classList.remove('hidden');
       }
@@ -564,10 +566,7 @@
     }
 
     async function loadDataFromServer() {
-      if (!supabaseClient) {
-        alert("Erro: Ligação com o servidor Supabase não inicializada.");
-        return;
-      }
+      if (!supabaseClient) return;
 
       try {
         const [secRes, macRes, usrRes] = await Promise.all([
@@ -576,15 +575,9 @@
           supabaseClient.from('users').select('*')
         ]);
 
-        if (secRes.data && Array.isArray(secRes.data)) {
-          sectors = secRes.data;
-        }
-        if (macRes.data && Array.isArray(macRes.data)) {
-          machines = macRes.data;
-        }
-        if (usrRes.data && Array.isArray(usrRes.data)) {
-          usersList = usrRes.data;
-        }
+        if (secRes.data && Array.isArray(secRes.data)) sectors = secRes.data;
+        if (macRes.data && Array.isArray(macRes.data)) machines = macRes.data;
+        if (usrRes.data && Array.isArray(usrRes.data)) usersList = usrRes.data;
 
         if (sectors.length === 0) {
           const defaultSec = { id: 'sec_default', name: 'Informatica' };
@@ -603,7 +596,7 @@
         localStorage.setItem('reg_users', JSON.stringify(usersList));
 
       } catch (err) {
-        console.error("Erro ao carregar dados do servidor:", err);
+        console.warn("Modo offline ou erro ao carregar dados do servidor:", err);
         try {
           sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
           machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
@@ -1279,4 +1272,60 @@
 
     function generateAndDownloadCSV() {
       const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]:checked');
-      const selectedSectorIds = Array.from(checkbox
+      const selectedSectorIds = Array.from(checkboxes).map(chk => chk.value);
+      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos uma pasta/setor."); return; }
+      
+      const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
+      
+      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimônio/Código\tModelo/Tipo\tSistema Operacional\tEstado\tPeriféricos\tObservações\tData de Cadastro\n";
+      
+      filteredMachines.forEach(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        const sectorName = sec ? sec.name.replace(/\t/g, ' ') : "Geral";
+        const ticket = (m.ticket || '-').replace(/\t/g, ' ');
+        const perfStr = m.peripherals ? m.peripherals.join(', ') : '-';
+        const code = (m.code || '-').replace(/\t/g, ' ');
+        const model = (m.model || '-').replace(/\t/g, ' ');
+        const os = (m.os || '-').replace(/\t/g, ' ');
+        const status = (m.status || '-').replace(/\t/g, ' ');
+        const notes = (m.notes || '-').replace(/[\t\n]/g, ' ');
+        const date = (m.date || '-').replace(/\t/g, ' ');
+
+        fileContent += `${sectorName}\t${ticket}\t${code}\t${model}\t${os}\t${status}\t${perfStr}\t${notes}\t${date}\n`;
+      });
+
+      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.xls`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      closeExportModal();
+    }
+
+    async function loadAuditLogs() {
+      const container = document.getElementById('audit-logs-list');
+      if(!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
+      let data = [];
+      try {
+        if(supabaseClient) {
+          const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+          data = res.data;
+        }
+      } catch(e){}
+      
+      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
+      container.innerHTML = '';
+      data.forEach(log => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
+        item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
+        container.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
