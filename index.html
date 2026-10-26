@@ -503,7 +503,6 @@
     let machines = [];
     let usersList = [];
     let offlineQueue = [];
-    let sessionMonitorInterval = null;
 
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
@@ -528,7 +527,6 @@
           if (currentUser && currentUser.username) {
             document.getElementById('view-login').classList.add('hidden');
             initApp();
-            startSessionMonitor();
             return;
           }
         }
@@ -536,6 +534,7 @@
         sessionStorage.removeItem('reg_current_user');
       }
 
+      // Se não houver sessão válida, assegura que a tela de login aparece
       document.getElementById('view-login').classList.remove('hidden');
     };
 
@@ -631,8 +630,7 @@
       }
     }
 
-    // LOGIN COM SESSÃO ÚNICA (DERRUBA OUTRAS SESSÕES ATIVAS)
-    async function handleLogin(e) {
+    function handleLogin(e) {
       e.preventDefault();
       const usernameInput = document.getElementById('login-username').value.trim();
       const passwordInput = document.getElementById('login-password').value.trim();
@@ -645,71 +643,18 @@
       }
 
       if (foundUser) {
-        const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        foundUser.session_token = sessionToken;
-
         currentUser = foundUser;
         sessionStorage.setItem('reg_current_user', JSON.stringify(currentUser));
-        localStorage.setItem('reg_active_session_' + foundUser.id, sessionToken);
-
-        if (supabaseClient && navigator.onLine) {
-          try {
-            await supabaseClient.from('users').update({ session_token: sessionToken }).eq('id', foundUser.id);
-          } catch (err) {
-            console.error("Erro ao atualizar token de sessão no servidor:", err);
-          }
-        }
-
         errorBox.classList.add('hidden');
         document.getElementById('view-login').classList.add('hidden');
         initApp();
-        startSessionMonitor();
       } else {
         errorBox.classList.remove('hidden');
       }
     }
 
-    // MONITOR DE SESSÃO
-    function startSessionMonitor() {
-      if (sessionMonitorInterval) clearInterval(sessionMonitorInterval);
-
-      sessionMonitorInterval = setInterval(async () => {
-        if (!currentUser || !currentUser.id) return;
-
-        const localToken = localStorage.getItem('reg_active_session_' + currentUser.id);
-
-        if (supabaseClient && navigator.onLine) {
-          try {
-            const { data } = await supabaseClient
-              .from('users')
-              .select('session_token')
-              .eq('id', currentUser.id)
-              .single();
-
-            if (data && data.session_token) {
-              if (localToken && data.session_token !== localToken) {
-                triggerForceLogout("A sua conta foi acedida noutro dispositivo. Esta sessão foi encerrada.");
-              }
-            }
-          } catch (e) {
-            console.warn("Erro ao monitorizar sessão:", e);
-          }
-        }
-      }, 5000);
-    }
-
-    function triggerForceLogout(reason) {
-      if (sessionMonitorInterval) clearInterval(sessionMonitorInterval);
-      alert(reason || "Sessão encerrada por segurança.");
-      sessionStorage.removeItem('reg_current_user');
-      currentUser = null;
-      document.getElementById('view-login').classList.remove('hidden');
-      document.getElementById('login-password').value = '';
-    }
-
     function handleLogout() {
       if (confirm("Tem certeza que deseja terminar a sessão?")) {
-        if (sessionMonitorInterval) clearInterval(sessionMonitorInterval);
         sessionStorage.removeItem('reg_current_user');
         currentUser = null;
         location.reload();
@@ -1219,4 +1164,327 @@
       checkboxes.forEach(chk => chk.checked = !allChecked);
     }
 
-    function editMachine(
+    function editMachine(id) {
+      const m = machines.find(item => item.id === id);
+      if (!m) return;
+
+      document.getElementById('edit-machine-id').value = m.id;
+      document.getElementById('machine-code').value = m.code;
+      document.getElementById('machine-model').value = m.model || '';
+      document.getElementById('machine-os').value = m.os || 'Win10';
+      document.getElementById('machine-status').value = m.status || 'Operacional';
+      document.getElementById('machine-notes').value = m.notes || '';
+      
+      document.querySelectorAll('input[name="peripherals"]').forEach(chk => {
+        chk.checked = m.peripherals && m.peripherals.includes(chk.value);
+      });
+
+      document.getElementById('modal-machine-title').innerText = 'Editar Máquina';
+
+      if (m.photo_url) {
+        currentBase64Photo = m.photo_url;
+        document.getElementById('photo-preview').src = m.photo_url;
+        document.getElementById('photo-preview-container').classList.remove('hidden');
+        document.getElementById('photo-label-text').innerText = 'Trocar Foto';
+      } else { removeCapturedPhoto(); }
+
+      document.getElementById('modal-machine').classList.remove('hidden');
+    }
+
+    function handlePhotoUpload(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          currentBase64Photo = canvas.toDataURL('image/jpeg', 0.7);
+          document.getElementById('photo-preview').src = currentBase64Photo;
+          document.getElementById('photo-preview-container').classList.remove('hidden');
+          document.getElementById('photo-label-text').innerText = 'Trocar Foto';
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeCapturedPhoto() {
+      currentBase64Photo = null;
+      document.getElementById('machine-photo').value = '';
+      document.getElementById('photo-preview').src = '';
+      document.getElementById('photo-preview-container').classList.add('hidden');
+      document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
+    }
+
+    function startScanner() {
+      document.getElementById('scanner-container').classList.remove('hidden');
+      if(html5QrcodeScanner) stopScanner();
+      try {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 220 }, (text) => {
+          document.getElementById('machine-code').value = text;
+          stopScanner();
+        }, () => {}).catch(() => stopScanner());
+      } catch(e) {
+        console.error("Erro no scanner:", e);
+      }
+    }
+
+    function stopScanner() {
+      if(html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); }).catch(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); });
+      } else { document.getElementById('scanner-container').classList.add('hidden'); }
+    }
+
+    async function saveMachine(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-machine-id').value;
+      const code = document.getElementById('machine-code').value.trim();
+      const model = document.getElementById('machine-model').value.trim();
+      const os = document.getElementById('machine-os').value;
+      const status = document.getElementById('machine-status').value;
+      const notes = document.getElementById('machine-notes').value.trim();
+      
+      const peripherals = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
+
+      if(!code) return;
+
+      // VALIDAÇÃO DE DUPLICIDADE (Impede cadastrar patrimônio que já existe)
+      const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase() && m.id !== editId);
+      if (existingMachine) {
+        const foundSector = sectors.find(s => s.id === existingMachine.sector_id);
+        const sectorName = foundSector ? foundSector.name : 'outro setor';
+        alert(`⚠️ Atenção: A máquina com o patrimônio/código "${code}" já está cadastrada no sistema (Setor: ${sectorName})!`);
+        return;
+      }
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+      const currentTimestamp = Date.now();
+      const sec = sectors.find(s => s.id === currentSectorId);
+      const sectorName = sec ? sec.name : 'Geral';
+
+      if (editId) {
+        const m = machines.find(item => item.id === editId);
+        if(m) {
+          m.code = code;
+          m.model = model;
+          m.os = os;
+          m.status = status;
+          m.peripherals = peripherals;
+          m.notes = notes;
+          if(currentBase64Photo) m.photo_url = currentBase64Photo;
+        }
+
+        const updatePayload = { code, model, os, status, peripherals, notes, photo_url: currentBase64Photo };
+
+        try {
+          if (supabaseClient && navigator.onLine) {
+            await supabaseClient.from('machines').update(updatePayload).eq('id', editId);
+          } else {
+            offlineQueue.push({ type: 'UPDATE_MACHINE', id: editId, payload: updatePayload });
+            saveOfflineQueueToStorage();
+          }
+        } catch(err){ 
+          console.error(err);
+          offlineQueue.push({ type: 'UPDATE_MACHINE', id: editId, payload: updatePayload });
+          saveOfflineQueueToStorage();
+        }
+
+        await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
+      } else {
+        let prefix = "GER";
+        if (sec && sec.name) {
+          prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+          if (!prefix) prefix = "SET";
+        }
+
+        const sectorMachinesCount = machines.filter(m => m.sector_id === currentSectorId).length;
+        const ticketNumber = String(sectorMachinesCount + 1).padStart(3, '0');
+        const ticket = `${prefix}-${ticketNumber}`;
+
+        const machineId = 'mac_' + currentTimestamp;
+        const newMachine = {
+          id: machineId,
+          sector_id: currentSectorId,
+          ticket, code, model, os, status, peripherals, notes,
+          photo_url: currentBase64Photo,
+          date: dateStr,
+          timestamp: currentTimestamp
+        };
+
+        const sheetPayload = {
+          sector: sectorName,
+          ticket: ticket,
+          code: code,
+          model: model,
+          os: os,
+          status: status,
+          peripherals: peripherals.join(', '),
+          notes: notes,
+          date: dateStr
+        };
+        
+        try {
+          if (supabaseClient && navigator.onLine) {
+            const { error } = await supabaseClient.from('machines').insert([newMachine]);
+            if (error) throw error;
+            syncToGoogleSheets(sheetPayload);
+          } else {
+            offlineQueue.push({ 
+              type: 'INSERT_MACHINE', 
+              payload: newMachine, 
+              sheetPayload: sheetPayload 
+            });
+            saveOfflineQueueToStorage();
+            alert("📦 Sem conexão: Máquina salva localmente! Será sincronizada automaticamente quando houver internet.");
+          }
+        } catch(err) {
+          offlineQueue.push({ 
+            type: 'INSERT_MACHINE', 
+            payload: newMachine, 
+            sheetPayload: sheetPayload 
+          });
+          saveOfflineQueueToStorage();
+          alert("📦 Erro de rede: Máquina salva localmente em modo offline.");
+        }
+
+        machines.push(newMachine);
+        await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
+      }
+
+      localStorage.setItem('reg_machines', JSON.stringify(machines));
+      closeMachineModal();
+      await openSectorItems(currentSectorId);
+    }
+
+    async function deleteMachine(id) {
+      if(confirm("Remover esta máquina?")) {
+        machines = machines.filter(m => m.id !== id);
+        localStorage.setItem('reg_machines', JSON.stringify(machines));
+        try {
+          if(supabaseClient && navigator.onLine) {
+            await supabaseClient.from('machines').delete().eq('id', id);
+          } else {
+            offlineQueue.push({ type: 'DELETE_MACHINE', id: id });
+            saveOfflineQueueToStorage();
+          }
+        } catch(e){
+          offlineQueue.push({ type: 'DELETE_MACHINE', id: id });
+          saveOfflineQueueToStorage();
+        }
+        await logAuditAction("Excluiu Máquina", `ID: ${id}`);
+        openSectorItems(currentSectorId);
+      }
+    }
+
+    function openImageView(src, title) {
+      document.getElementById('full-size-image').src = src;
+      document.getElementById('image-modal-title').innerText = title;
+      document.getElementById('modal-image-view').classList.remove('hidden');
+    }
+    function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
+
+    function openExportModal() {
+      if (sectors.length === 0) { alert("Não existem setores cadastrados para exportar."); return; }
+      const container = document.getElementById('export-sectors-checkboxes');
+      if(!container) return;
+      container.innerHTML = '';
+      sectors.forEach(sec => {
+        const div = document.createElement('label');
+        div.className = "flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded";
+        div.innerHTML = `
+          <input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+          <span class="font-medium text-slate-700">${sec.name}</span>
+        `;
+        container.appendChild(div);
+      });
+      document.getElementById('modal-export').classList.remove('hidden');
+    }
+
+    function closeExportModal() { document.getElementById('modal-export').classList.add('hidden'); }
+    function toggleSelectAllExport(status) {
+      document.querySelectorAll('input[name="export-sector-chk"]').forEach(chk => chk.checked = status);
+    }
+
+    function generateAndDownloadCSV() {
+      const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]:checked');
+      const selectedSectorIds = Array.from(checkboxes).map(chk => chk.value);
+      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos uma pasta/setor."); return; }
+      
+      const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
+      
+      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimônio/Código\tModelo/Tipo\tSistema Operacional\tEstado\tPeriféricos\tObservações\tData de Cadastro\n";
+      
+      filteredMachines.forEach(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        const sectorName = sec ? sec.name.replace(/\t/g, ' ') : "Geral";
+        const ticket = (m.ticket || '-').replace(/\t/g, ' ');
+        const perfStr = m.peripherals ? m.peripherals.join(', ') : '-';
+        const code = (m.code || '-').replace(/\t/g, ' ');
+        const model = (m.model || '-').replace(/\t/g, ' ');
+        const os = (m.os || '-').replace(/\t/g, ' ');
+        const status = (m.status || '-').replace(/\t/g, ' ');
+        const notes = (m.notes || '-').replace(/[\t\n]/g, ' ');
+        const date = (m.date || '-').replace(/\t/g, ' ');
+
+        fileContent += `${sectorName}\t${ticket}\t${code}\t${model}\t${os}\t${status}\t${perfStr}\t${notes}\t${date}\n`;
+      });
+
+      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.xls`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      closeExportModal();
+    }
+
+    async function loadAuditLogs() {
+      const container = document.getElementById('audit-logs-list');
+      if(!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
+      let data = [];
+      try {
+        if(supabaseClient && navigator.onLine) {
+          const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+          data = res.data;
+        }
+      } catch(e){}
+      
+      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
+      container.innerHTML = '';
+      data.forEach(log => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
+        item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
+        container.appendChild(item);
+      });
+    }
+  </script>
+
+  <!-- REGISTO DO SERVICE WORKER PARA ABRIR SEM INTERNET -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker registado:', reg.scope))
+          .catch((err) => console.log('Erro no Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>
