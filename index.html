@@ -502,9 +502,9 @@
     let html5QrcodeScanner = null;
     let currentUser = null;
 
-    // Inicialização segura e assíncrona imediata
     window.onload = async () => {
       await loadDataFromServer();
+      initRealtimeSubscription();
 
       try {
         const savedUser = sessionStorage.getItem('reg_current_user');
@@ -525,6 +525,23 @@
         document.getElementById('view-login').classList.remove('hidden');
       }
     };
+
+    // SUBSCRIÇÃO EM TEMPO REAL (REALTIME)
+    function initRealtimeSubscription() {
+      if (!supabaseClient) return;
+
+      supabaseClient
+        .channel('public-db-changes')
+        .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
+          // Atualiza dados silenciosamente em segundo plano quando houver alteração remota
+          await loadDataFromServer();
+          renderSectors();
+          if (currentSectorId) {
+            renderMachines();
+          }
+        })
+        .subscribe();
+    }
 
     function handleLogin(e) {
       e.preventDefault();
@@ -1155,6 +1172,15 @@
 
       if(!code) return;
 
+      // VALIDAÇÃO DE DUPLICIDADE (Evita cadastrar patrimônio repetido)
+      const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase() && m.id !== editId);
+      if (existingMachine) {
+        const foundSector = sectors.find(s => s.id === existingMachine.sector_id);
+        const sectorName = foundSector ? foundSector.name : 'outro setor';
+        alert(`⚠️ Atenção: A máquina com o patrimônio/código "${code}" já está cadastrada no sistema (Setor: ${sectorName})!`);
+        return;
+      }
+
       const now = new Date();
       const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
       const currentTimestamp = Date.now();
@@ -1208,7 +1234,7 @@
           if(supabaseClient) {
             const { error } = await supabaseClient.from('machines').insert([newMachine]);
             if(error) {
-              alert("Erro ao salvar no servidor (adicione a coluna 'os' se necessário na tabela machines): " + error.message);
+              alert("Erro ao salvar no servidor: " + error.message);
               return;
             }
           }
