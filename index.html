@@ -1364,6 +1364,7 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
+    // FUNÇÃO DE IMPORTAÇÃO COM BLOQUEIO DE DUPLICADAS E RELATÓRIO DO QUE NÃO FOI IMPORTADO
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1384,16 +1385,34 @@
 
           let importedSectorsCount = 0;
           let importedMachinesCount = 0;
+          let skippedDuplicates = [];
+          let skippedInvalid = [];
 
           for (const row of rows) {
             const sectorNameRaw = String(row['SETOR'] || row['Setor'] || row['setor'] || 'GERAL').trim().toUpperCase();
-            if (!sectorNameRaw) continue;
+            
+            const code = String(row['PATRIMÔNIO'] || row['Patrimônio'] || row['Código'] || row['PATRIMONIO'] || row['codigo'] || '').trim();
+            
+            // Registo inválido se não tiver código ou setor
+            if (!code || !sectorNameRaw) {
+              if (code || sectorNameRaw) {
+                skippedInvalid.push(code || 'Linha sem código');
+              }
+              continue;
+            }
+
+            // BLOQUEIO DE DUPLICADAS (Verifica se já existe na lista local ou global)
+            const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase());
+            if (existingMachine) {
+              skippedDuplicates.push(code);
+              continue; // Pula esta linha para não duplicar
+            }
 
             let sec = sectors.find(s => s.name.toUpperCase() === sectorNameRaw);
             let sectorId = sec ? sec.id : null;
 
             if (!sec) {
-              sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+              sectorId = 'sec_' + Date.now + '_' + Math.random().toString(36).substr(2, 4);
               const newSector = { id: sectorId, name: sectorNameRaw };
               sectors.push(newSector);
               importedSectorsCount++;
@@ -1402,12 +1421,6 @@
                 await supabaseClient.from('sectors').insert([newSector]);
               }
             }
-
-            const code = String(row['PATRIMÔNIO'] || row['Patrimônio'] || row['Código'] || row['PATRIMONIO'] || row['codigo'] || '').trim();
-            if (!code) continue;
-
-            const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase());
-            if (existingMachine) continue;
 
             const model = String(row['CONJUNTO/ LENOVO'] || row['Modelo'] || row['modelo'] || 'POSITIVO').trim();
             const monitor = String(row['MONITOR'] || row['Periféricos'] || row['monitor'] || '').trim();
@@ -1463,9 +1476,21 @@
           localStorage.setItem('reg_sectors', JSON.stringify(sectors));
           localStorage.setItem('reg_machines', JSON.stringify(machines));
 
-          await logAuditAction("Importou Planilha", `Importados ${importedSectorsCount} setores e ${importedMachinesCount} máquinas.`);
+          await logAuditAction("Importou Planilha", `Importados ${importedSectorsCount} setores e ${importedMachinesCount} máquinas. Ignoradas ${skippedDuplicates.length} duplicadas.`);
           
-          alert(`✅ Importação e Sincronização concluídas!\n- Setores: ${importedSectorsCount}\n- Máquinas: ${importedMachinesCount}`);
+          // RELATÓRIO DETALHADO DO QUE FOI IMPORTADO E DO QUE NÃO FOI
+          let reportMsg = `📊 Relatório da Importação:\n\n`;
+          reportMsg += `✅ Máquinas importadas com sucesso: ${importedMachinesCount}\n`;
+          reportMsg += `📁 Novos setores criados: ${importedSectorsCount}\n`;
+          
+          if (skippedDuplicates.length > 0) {
+            reportMsg += `⚠️ Duplicadas ignoradas (já existiam): ${skippedDuplicates.length}\n   (Exs: ${skippedDuplicates.slice(0, 5).join(', ')}${skippedDuplicates.length > 5 ? '...' : ''})\n`;
+          }
+          if (skippedInvalid.length > 0) {
+            reportMsg += `❌ Ignoradas por dados incompletos: ${skippedInvalid.length}\n`;
+          }
+
+          alert(reportMsg);
           renderSectors();
         } catch (err) {
           console.error("Erro ao importar Excel:", err);
@@ -1694,11 +1719,11 @@
       if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
       container.innerHTML = '';
       data.forEach(log => {
-		const item = document.createElement('div');
-		item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
-		item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
-		container.appendChild(item);
-	  });
+        const item = document.createElement('div');
+        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
+        item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
+        container.appendChild(item);
+      });
     }
   </script>
 </body>
