@@ -1511,4 +1511,195 @@
         if(m) {
           m.code = code;
           m.model = model;
-          m.os
+          m.os = os;
+          m.status = status;
+          m.peripherals = peripherals;
+          m.notes = notes;
+          if(currentBase64Photo) m.photo_url = currentBase64Photo;
+        }
+
+        try {
+          if (supabaseClient && navigator.onLine) {
+            const { error } = await supabaseClient.from('machines').update(updatePayload).eq('id', editId);
+            if (error) throw error;
+          } else {
+            offlineQueue.push({ type: 'UPDATE_MACHINE', id: editId, payload: updatePayload });
+            saveOfflineQueueToStorage();
+          }
+        } catch(err){ 
+          console.error("Erro Supabase Update:", err);
+          alert("❌ Erro ao atualizar no servidor: " + (err.message || err));
+          return;
+        }
+
+        await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
+      } else {
+        let prefix = "GER";
+        if (sec && sec.name) {
+          prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+          if (!prefix) prefix = "SET";
+        }
+
+        const sectorMachinesCount = machines.filter(m => m.sector_id === currentSectorId).length;
+        const ticketNumber = String(sectorMachinesCount + 1).padStart(3, '0');
+        const ticket = `${prefix}-${ticketNumber}`;
+
+        const machineId = 'mac_' + currentTimestamp;
+        const newMachine = {
+          id: machineId,
+          sector_id: currentSectorId,
+          ticket, code, model, status, peripherals, notes,
+          photo_url: currentBase64Photo,
+          date: dateStr,
+          timestamp: currentTimestamp
+        };
+
+        const sheetPayload = {
+          sector: sectorName,
+          ticket: ticket,
+          code: code,
+          model: model,
+          os: os,
+          status: status,
+          peripherals: peripherals.join(', '),
+          notes: notes,
+          date: dateStr
+        };
+        
+        try {
+          if (supabaseClient && navigator.onLine) {
+            const { error } = await supabaseClient.from('machines').insert([newMachine]);
+            if (error) throw error;
+            syncToGoogleSheets(sheetPayload);
+          } else {
+            offlineQueue.push({ 
+              type: 'INSERT_MACHINE', 
+              payload: newMachine, 
+              sheetPayload: sheetPayload 
+            });
+            saveOfflineQueueToStorage();
+            alert("📦 Sem conexão: Máquina salva localmente!");
+          }
+        } catch(err) {
+          console.error("Erro Supabase Insert:", err);
+          alert("❌ Erro detalhado do Servidor: " + (err.message || JSON.stringify(err)));
+          return;
+        }
+
+        machines.push(newMachine);
+        await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
+      }
+
+      localStorage.setItem('reg_machines', JSON.stringify(machines));
+      closeMachineModal();
+      await openSectorItems(currentSectorId);
+    }
+
+    async function deleteMachine(id) {
+      if(confirm("Remover esta máquina?")) {
+        machines = machines.filter(m => m.id !== id);
+        localStorage.setItem('reg_machines', JSON.stringify(machines));
+        try {
+          if(supabaseClient && navigator.onLine) {
+            await supabaseClient.from('machines').delete().eq('id', id);
+          } else {
+            offlineQueue.push({ type: 'DELETE_MACHINE', id: id });
+            saveOfflineQueueToStorage();
+          }
+        } catch(e){
+          offlineQueue.push({ type: 'DELETE_MACHINE', id: id });
+          saveOfflineQueueToStorage();
+        }
+        await logAuditAction("Excluiu Máquina", `ID: ${id}`);
+        openSectorItems(currentSectorId);
+      }
+    }
+
+    function openImageView(src, title) {
+      document.getElementById('full-size-image').src = src;
+      document.getElementById('image-modal-title').innerText = title;
+      document.getElementById('modal-image-view').classList.remove('hidden');
+    }
+    function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
+
+    function openExportModal() {
+      if (sectors.length === 0) { alert("Não existem setores cadastrados para exportar."); return; }
+      const container = document.getElementById('export-sectors-checkboxes');
+      if(!container) return;
+      container.innerHTML = '';
+      sectors.forEach(sec => {
+        const div = document.createElement('label');
+        div.className = "flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded";
+        div.innerHTML = `
+          <input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+          <span class="font-medium text-slate-700">${sec.name}</span>
+        `;
+        container.appendChild(div);
+      });
+      document.getElementById('modal-export').classList.remove('hidden');
+    }
+
+    function closeExportModal() { document.getElementById('modal-export').classList.add('hidden'); }
+    function toggleSelectAllExport(status) {
+      document.querySelectorAll('input[name="export-sector-chk"]').forEach(chk => chk.checked = status);
+    }
+
+    function generateAndDownloadCSV() {
+      const checkboxes = document.querySelectorAll('input[name="export-sector-chk"]:checked');
+      const selectedSectorIds = Array.from(checkboxes).map(chk => chk.value);
+      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos uma pasta/setor."); return; }
+      
+      const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
+      
+      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimônio/Código\tModelo/Tipo\tSistema Operacional\tEstado\tPeriféricos\tObservações\tData de Cadastro\n";
+      
+      filteredMachines.forEach(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        const sectorName = sec ? sec.name.replace(/\t/g, ' ') : "Geral";
+        const ticket = (m.ticket || '-').replace(/\t/g, ' ');
+        const perfStr = m.peripherals ? m.peripherals.join(', ') : '-';
+        const code = (m.code || '-').replace(/\t/g, ' ');
+        const model = (m.model || '-').replace(/\t/g, ' ');
+        const os = (m.os || '-').replace(/\t/g, ' ');
+        const status = (m.status || '-').replace(/\t/g, ' ');
+        const notes = (m.notes || '-').replace(/[\t\n]/g, ' ');
+        const date = (m.date || '-').replace(/\t/g, ' ');
+
+        fileContent += `${sectorName}\t${ticket}\t${code}\t${model}\t${os}\t${status}\t${perfStr}\t${notes}\t${date}\n`;
+      });
+
+      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Relatorio_${new Date().toISOString().slice(0, 10)}.xls`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      closeExportModal();
+    }
+
+    async function loadAuditLogs() {
+      const container = document.getElementById('audit-logs-list');
+      if(!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
+      let data = [];
+      try {
+        if(supabaseClient && navigator.onLine) {
+          const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+          data = res.data;
+        }
+      } catch(e){}
+      
+      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
+      container.innerHTML = '';
+      data.forEach(log => {
+		const item = document.createElement('div');
+		item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
+		item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
+		container.appendChild(item);
+	  });
+    }
+  </script>
+</body>
+</html>
