@@ -92,15 +92,12 @@
       <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Sistemas & Setores</h1>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="forceSyncWithGoogleSheets()" title="Atualizar Planilha Online (F5)" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
-        <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Sync Sheets</span>
-      </button>
-      <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer">
-        <i class="fa-solid fa-file-arrow-up"></i> <span class="hidden sm:inline">Importar</span>
+      <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer">
+        <i class="fa-solid fa-file-arrow-up"></i> Importar Excel
         <input type="file" id="import-excel-file" accept=".xlsx, .xls, .csv" onchange="handleExcelImport(event)" class="hidden">
       </label>
-      <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Baixar</span>
+      <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow">
+        <i class="fa-solid fa-file-excel"></i> Excel
       </button>
     </div>
   </header>
@@ -545,7 +542,7 @@
         sessionStorage.removeItem('reg_current_user');
       }
 
-      document.getElementById('view-login').classList.add('hidden');
+      document.getElementById('view-login').classList.remove('hidden');
     };
 
     function setupNetworkListeners() {
@@ -636,60 +633,6 @@
       } catch (e) {
         console.error("Erro ao sincronizar com Google Sheets:", e);
       }
-    }
-
-    // FUNÇÃO "F5" PARA FORÇAR A SINCRONIZAÇÃO DE TODAS AS MÁQUINAS COM O GOOGLE SHEETS
-    async function forceSyncWithGoogleSheets() {
-      if (!navigator.onLine) {
-        alert("⚠️ Você está offline. Conecte-se à internet para atualizar a planilha online.");
-        return;
-      }
-
-      if (!machines || machines.length === 0) {
-        alert("⚠️ Não existem máquinas registradas para sincronizar.");
-        return;
-      }
-
-      const btn = document.getElementById('btn-sync-sheets');
-      const originalHtml = btn.innerHTML;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A sincronizar...`;
-      btn.disabled = true;
-
-      let successCount = 0;
-
-      for (const m of machines) {
-        const sec = sectors.find(s => s.id === m.sector_id);
-        const sectorName = sec ? sec.name : 'Geral';
-        const sheetPayload = {
-          sector: sectorName,
-          ticket: m.ticket || '-',
-          code: m.code || '-',
-          model: m.model || '-',
-          os: m.os || '-',
-          status: m.status || '-',
-          peripherals: Array.isArray(m.peripherals) ? m.peripherals.join(', ') : (m.peripherals || '-'),
-          notes: m.notes || '-',
-          date: m.date || '-'
-        };
-
-        try {
-          await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(sheetPayload)
-          });
-          successCount++;
-          // Pequena pausa para evitar sobrecarga no Webhook
-          await new Promise(r => setTimeout(r, 150));
-        } catch (err) {
-          console.error("Erro ao enviar máquina para o Sheets:", err);
-        }
-      }
-
-      btn.innerHTML = originalHtml;
-      btn.disabled = false;
-      alert(`✅ Sincronização concluída!\nForam enviadas ${successCount} de ${machines.length} máquinas para a planilha online.`);
     }
 
     async function handleLogin(e) {
@@ -1384,9 +1327,11 @@
           let importedMachinesCount = 0;
 
           for (const row of rows) {
+            // Identifica o setor (procurando pelas colunas SETOR ou Setor)
             const sectorNameRaw = String(row['SETOR'] || row['Setor'] || row['setor'] || 'GERAL').trim().toUpperCase();
             if (!sectorNameRaw) continue;
 
+            // Verifica se o setor já existe na lista
             let sec = sectors.find(s => s.name.toUpperCase() === sectorNameRaw);
             let sectorId = sec ? sec.id : null;
 
@@ -1401,9 +1346,11 @@
               }
             }
 
+            // Identifica o patrimônio / código
             const code = String(row['PATRIMÔNIO'] || row['Patrimônio'] || row['Código'] || row['PATRIMONIO'] || row['codigo'] || '').trim();
             if (!code) continue;
 
+            // Evita duplicatas de código
             const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase());
             if (existingMachine) continue;
 
@@ -1440,21 +1387,8 @@
             machines.push(newMachine);
             importedMachinesCount++;
 
-            const sheetPayload = {
-              sector: sectorNameRaw,
-              ticket: ticket,
-              code: code,
-              model: model,
-              os: 'Win10',
-              status: 'Operacional',
-              peripherals: peripherals.join(', '),
-              notes: notes,
-              date: dateStr
-            };
-
             if (supabaseClient && navigator.onLine) {
               await supabaseClient.from('machines').insert([newMachine]);
-              syncToGoogleSheets(sheetPayload);
             }
           }
 
@@ -1463,7 +1397,7 @@
 
           await logAuditAction("Importou Planilha", `Importados ${importedSectorsCount} setores e ${importedMachinesCount} máquinas.`);
           
-          alert(`✅ Importação e Sincronização concluídas!\n- Setores: ${importedSectorsCount}\n- Máquinas: ${importedMachinesCount}`);
+          alert(`✅ Importação concluída com sucesso!\n- Setores criados/atualizados: ${importedSectorsCount}\n- Máquinas importadas: ${importedMachinesCount}`);
           renderSectors();
         } catch (err) {
           console.error("Erro ao importar Excel:", err);
@@ -1689,4 +1623,26 @@
         }
       } catch(e){}
       
-      ...
+      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
+      container.innerHTML = '';
+      data.forEach(log => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex flex-col gap-1";
+        item.innerHTML = `<div class="flex justify-between items-center font-bold text-blue-700"><span>${log.user_action}</span><span class="text-[10px] text-slate-400">${log.date}</span></div><p class="text-slate-600">${log.details}</p>`;
+        container.appendChild(item);
+      });
+    }
+  </script>
+
+  <!-- REGISTO DO SERVICE WORKER PARA ABRIR SEM INTERNET -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker registado:', reg.scope))
+          .catch((err) => console.log('Erro no Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>
