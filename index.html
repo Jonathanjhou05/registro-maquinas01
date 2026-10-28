@@ -131,10 +131,10 @@
         </div>
       </div>
 
-      <!-- BARRA DE PESQUISA GLOBAL -->
+      <!-- BARRA DE PESQUISA GLOBAL (Pesquisa por patrimônio, modelo, observação ou pasta) -->
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar patrimônio, modelo ou observação..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar pasta, patrimônio, modelo ou obs..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
       </div>
 
       <div class="flex justify-between items-center mb-2 pt-1">
@@ -352,7 +352,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD/EDIT SECTOR -->
+  <!-- MODAL: ADD/EDIT SECTOR (COM OPÇÃO DE COR) -->
   <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -364,6 +364,13 @@
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
           <input type="text" id="folder-name" required placeholder="Ex: Informatica, RH, Recepção..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Cor da Pasta</label>
+          <div class="flex items-center gap-3">
+            <input type="color" id="folder-color" value="#2563eb" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer p-1 bg-white">
+            <span class="text-xs text-slate-500">Selecione a cor do ícone ou destaque da pasta</span>
+          </div>
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeFolderModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
@@ -936,7 +943,7 @@
         if (usrRes.data && Array.isArray(usrRes.data)) usersList = usrRes.data;
 
         if (sectors.length === 0) {
-          const defaultSec = { id: 'sec_default', name: 'Informatica' };
+          const defaultSec = { id: 'sec_default', name: 'Informatica', color: '#2563eb' };
           await supabaseClient.from('sectors').insert([defaultSec]);
           sectors = [defaultSec];
         }
@@ -982,7 +989,13 @@
         return;
       }
 
+      // Procura pastas que correspondem à pesquisa
+      const matchedSectors = sectors.filter(s => s.name.toLowerCase().includes(q));
+      const matchedSectorIds = matchedSectors.map(s => s.id);
+
+      // Procura máquinas que correspondem à pesquisa ou pertencem a pastas encontradas
       const matchedMachines = machines.filter(m => 
+        matchedSectorIds.includes(m.sector_id) ||
         (m.code && m.code.toLowerCase().includes(q)) || 
         (m.model && m.model.toLowerCase().includes(q)) || 
         (m.ticket && m.ticket.toLowerCase().includes(q)) ||
@@ -994,7 +1007,7 @@
       container.innerHTML = `<h3 class="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Resultados da Pesquisa (${matchedMachines.length})</h3>`;
 
       if (matchedMachines.length === 0) {
-        container.innerHTML += `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-500">Nenhum equipamento encontrado para "${q}".</div>`;
+        container.innerHTML += `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-500">Nenhum resultado encontrado para "${q}".</div>`;
         return;
       }
 
@@ -1172,14 +1185,21 @@
         return;
       }
 
-      sectors.forEach(sec => {
+      // ORDENAÇÃO ALFABÉTICA DAS PASTAS (A-Z)
+      const sortedSectors = [...sectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
+
+      sortedSectors.forEach(sec => {
         const count = machines.filter(m => m.sector_id === sec.id).length;
+        const folderColor = sec.color || '#2563eb';
+
         const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between cursor-pointer";
+        card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between cursor-pointer hover:border-blue-300 transition-all";
         card.onclick = () => openSectorItems(sec.id);
         card.innerHTML = `
           <div class="flex items-center gap-3.5">
-            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg"><i class="fa-solid fa-folder"></i></div>
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg shadow-sm" style="background-color: ${folderColor}20; color: ${folderColor};">
+              <i class="fa-solid fa-folder"></i>
+            </div>
             <div>
               <h3 class="font-bold text-slate-800 text-sm">${sec.name}</h3>
               <span class="text-xs text-slate-500">${count} máquina${count !== 1 ? 's' : ''}</span>
@@ -1198,6 +1218,7 @@
     function openFolderModal() {
       document.getElementById('folder-id').value = '';
       document.getElementById('folder-name').value = '';
+      document.getElementById('folder-color').value = '#2563eb';
       document.getElementById('modal-folder-title').innerText = 'Novo Setor';
       document.getElementById('modal-folder').classList.remove('hidden');
     }
@@ -1207,20 +1228,24 @@
       e.preventDefault();
       const id = document.getElementById('folder-id').value;
       const name = document.getElementById('folder-name').value.trim();
+      const color = document.getElementById('folder-color').value;
       if(!name) return;
 
       if(id) {
         const sec = sectors.find(s => s.id === id);
-        if(sec) sec.name = name;
+        if(sec) {
+          sec.name = name;
+          sec.color = color;
+        }
         try {
           if(supabaseClient && navigator.onLine) {
-            await supabaseClient.from('sectors').update({ name }).eq('id', id);
+            await supabaseClient.from('sectors').update({ name, color }).eq('id', id);
           }
         } catch(e){}
         await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
       } else {
         const newId = 'sec_' + Date.now();
-        const newSector = { id: newId, name };
+        const newSector = { id: newId, name, color };
         sectors.push(newSector);
         try {
           if(supabaseClient && navigator.onLine) {
@@ -1239,7 +1264,8 @@
       if(!sec) return;
       document.getElementById('folder-id').value = sec.id;
       document.getElementById('folder-name').value = sec.name;
-      document.getElementById('modal-folder-title').innerText = 'Renomear Setor';
+      document.getElementById('folder-color').value = sec.color || '#2563eb';
+      document.getElementById('modal-folder-title').innerText = 'Editar Setor';
       document.getElementById('modal-folder').classList.remove('hidden');
     }
 
@@ -1533,7 +1559,7 @@
 
             if (!sec) {
               sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-              const newSector = { id: sectorId, name: sectorNameRaw };
+              const newSector = { id: sectorId, name: sectorNameRaw, color: '#2563eb' };
               sectors.push(newSector);
               importedSectorsCount++;
               
