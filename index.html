@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>inventário HOB - Nuvem & Offline</title>
+  <title>Inventário Maq HOB - Nuvem & Offline</title>
 
   <!-- PWA Metadata -->
   <link rel="manifest" href="manifest.json">
@@ -89,7 +89,7 @@
       <button id="btn-back" onclick="goBack()" class="hidden text-white hover:text-blue-100 text-lg">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
-      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Sistemas & Setores</h1>
+      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Andares & Setores</h1>
     </div>
     <div class="flex items-center gap-2">
       <button onclick="forceSyncWithGoogleSheets()" title="Atualizar Folha Online" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
@@ -108,7 +108,7 @@
   <!-- CONTENT CONTAINER -->
   <main class="flex-1 overflow-y-auto relative p-4 pb-24" id="main-container">
     
-    <!-- VIEW 1: SECTORS LIST -->
+    <!-- VIEW 1: FLOORS & SECTORS LIST -->
     <section id="view-sectors" class="space-y-4">
       
       <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS -->
@@ -131,19 +131,38 @@
         </div>
       </div>
 
-      <!-- BARRA DE PESQUISA GLOBAL (Pesquisa por pasta, patrimônio, modelo, etc.) -->
+      <!-- BARRA DE PESQUISA GLOBAL -->
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar pasta, património, modelo ou obs..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar andar, pasta, património, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
       </div>
 
-      <div class="flex justify-between items-center mb-2 pt-1">
-        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pastas de Setores</span>
-        <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
-          <i class="fa-solid fa-folder-plus"></i> Novo Setor
-        </button>
+      <!-- ABAS DOS ANDARES ESTILO NAVEGADOR COM BOTÃO + -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Andares (Abas)</span>
+          <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
+            <i class="fa-solid fa-folder-plus"></i> Novo Setor
+          </button>
+        </div>
+        
+        <!-- Lista de Abas de Andares + Botão + -->
+        <div id="floors-tabs-container" class="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs"></div>
       </div>
 
+      <!-- CABEÇALHO DO ANDAR ATUAL E SUAS PASTAS -->
+      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <h3 id="current-floor-title" class="font-bold text-sm text-indigo-900">Andar</h3>
+          <p id="current-floor-subtitle" class="text-[11px] text-slate-500">Selecione um andar acima</p>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="editCurrentFloor()" id="btn-edit-floor" class="hidden text-xs text-slate-500 hover:text-indigo-600 px-2 py-1"><i class="fa-solid fa-pen"></i> Renomear</button>
+          <button onclick="deleteCurrentFloor()" id="btn-delete-floor" class="hidden text-xs text-slate-400 hover:text-red-600 px-2 py-1" title="Excluir Andar"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      </div>
+
+      <!-- LISTA DE PASTAS DO ANDAR SELECIONADO (EM ORDEM ALFABÉTICA) -->
       <div id="sectors-list" class="grid grid-cols-1 gap-3"></div>
     </section>
 
@@ -219,7 +238,7 @@
   <nav class="bg-white border-t border-slate-200 flex-none fixed bottom-0 left-0 right-0 z-20 flex justify-around py-2 px-4 shadow-lg">
     <button onclick="switchTab('sectors')" id="nav-sectors" class="flex flex-col items-center gap-1 text-blue-600">
       <i class="fa-solid fa-folder-open text-lg"></i>
-      <span class="text-[10px] font-medium">Setores</span>
+      <span class="text-[10px] font-medium">Inventário</span>
     </button>
     <button onclick="switchTab('admin')" id="nav-admin" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
       <i class="fa-solid fa-shield-halved text-lg"></i>
@@ -239,16 +258,13 @@
         <button onclick="closeDuplicatesModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- ÁREA IMPRIMÍVEL DE DUPLICATAS -->
       <div id="printable-duplicates" class="p-5 space-y-3 overflow-y-auto flex-1 text-xs bg-white">
         <div class="text-center pb-2 border-b">
           <h4 class="font-bold text-sm text-slate-800">Relatório de Conflitos / Duplicatas na Sincronização</h4>
           <p id="dup-report-date" class="text-[11px] text-slate-500 mt-0.5"></p>
         </div>
-        <p class="text-slate-600">Os seguintes registos foram ignorados na sincronização/importação por já existirem na base de dados ou na planilha:</p>
-        <div id="duplicates-list-container" class="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-60 overflow-y-auto font-mono">
-          <!-- Gerado dinamicamente -->
-        </div>
+        <p class="text-slate-600">Os seguintes registos foram ignorados na sincronização por já existirem na planilha:</p>
+        <div id="duplicates-list-container" class="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-60 overflow-y-auto font-mono"></div>
       </div>
 
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between">
@@ -257,6 +273,38 @@
         </button>
         <button type="button" onclick="closeDuplicatesModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT SECTOR (PASTA) -->
+  <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-folder-title" class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-folder-plus mr-1.5"></i> Novo Setor / Pasta</h3>
+        <button onclick="closeFolderModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form onsubmit="saveFolder(event)" class="p-5 space-y-4 text-xs">
+        <input type="hidden" id="folder-id">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Andar Atual</label>
+          <input type="text" id="folder-floor-display" readonly class="w-full border border-slate-200 rounded-lg p-2.5 text-sm bg-slate-50 font-bold text-indigo-900">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
+          <input type="text" id="folder-name" required placeholder="Ex: Informatica, RH, Recepção..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Cor da Pasta</label>
+          <div class="flex items-center gap-3">
+            <input type="color" id="folder-color" value="#2563eb" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer p-1 bg-white">
+            <span class="text-slate-500">Cor de destaque da pasta</span>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeFolderModal()" class="px-4 py-2 font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-4 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar Pasta</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -294,7 +342,6 @@
         <button onclick="closeMachineDetails()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- ÁREA IMPRIMÍVEL (TICKET) -->
       <div id="printable-ticket" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
         <div id="detail-photo-container" class="hidden text-center">
           <img id="detail-photo" onclick="openImageView(this.src, 'Equipamento')" class="w-full h-48 object-cover rounded-xl border shadow-sm cursor-pointer hover:opacity-95 transition">
@@ -306,7 +353,7 @@
             <span id="detail-ticket" class="font-mono font-bold text-purple-700 text-sm">-</span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Setor / Pasta:</span>
+            <span class="text-slate-500 font-semibold">Andar / Setor:</span>
             <span id="detail-sector" class="font-bold text-slate-800">-</span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
@@ -375,34 +422,6 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeUserModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: ADD/EDIT SECTOR -->
-  <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
-        <h3 id="modal-folder-title" class="font-bold text-slate-800">Novo Setor</h3>
-        <button onclick="closeFolderModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-      <form onsubmit="saveFolder(event)" class="p-5 space-y-4">
-        <input type="hidden" id="folder-id">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
-          <input type="text" id="folder-name" required placeholder="Ex: Informatica, RH, Recepção..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Cor da Pasta</label>
-          <div class="flex items-center gap-3">
-            <input type="color" id="folder-color" value="#2563eb" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer p-1 bg-white">
-            <span class="text-xs text-slate-500">Selecione a cor de destaque da pasta</span>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeFolderModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
           <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
         </div>
       </form>
@@ -532,6 +551,7 @@
       }
     } catch (e) { console.error(e); }
 
+    let floors = [];
     let sectors = [];
     let machines = [];
     let usersList = [];
@@ -540,6 +560,7 @@
     let customModelsList = ['Positivo', 'Dell', 'Lenovo', 'HP', 'C3Tech'];
     let sessionMonitorInterval = null;
 
+    let currentFloorId = null;
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
     let currentBase64Photo = null;
@@ -553,11 +574,12 @@
       setupNetworkListeners();
       
       try {
+        floors = JSON.parse(localStorage.getItem('reg_floors') || '[]');
         sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
         machines = JSON.parse(localStorage.getItem('reg_machines') || '[]');
         usersList = JSON.parse(localStorage.getItem('reg_users') || '[]');
       } catch(e) {
-        sectors = []; machines = []; usersList = [];
+        floors = []; sectors = []; machines = []; usersList = [];
       }
 
       if (!usersList || usersList.length === 0) {
@@ -680,7 +702,7 @@
         const currentSelected = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
         currentSelected.push(formatted);
         renderPeripheralsCheckboxes(currentSelected);
-      } else { alert(" Este periférico já existe."); }
+      } else { alert("Este periférico já existe."); }
     }
 
     function removePeripheralItem(itemToRemove) {
@@ -733,7 +755,7 @@
       if (syncedCount > 0) {
         await loadDataFromServer();
         if (currentSectorId) renderMachines();
-        renderSectors();
+        renderFloorsAndSectors();
       }
     }
 
@@ -741,23 +763,21 @@
       if (!supabaseClient) return;
       supabaseClient.channel('public-db-changes').on('postgres_changes', { event: '*', schema: 'public' }, async () => {
         await loadDataFromServer();
-        renderSectors();
+        renderFloorsAndSectors();
         if (currentSectorId) renderMachines();
       }).subscribe();
     }
 
-    // SINCRONIZAÇÃO INTELIGENTE COM A PLANILHA (Evita duplicadas e gera relatório)
     async function forceSyncWithGoogleSheets() {
       if (!navigator.onLine) { alert("⚠️ Encontra-se offline."); return; }
       if (!machines || machines.length === 0) { alert("⚠️ Não existem máquinas para sincronizar."); return; }
       
       const btn = document.getElementById('btn-sync-sheets');
       const originalHtml = btn.innerHTML;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar e sincronizar...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar...`;
       btn.disabled = true;
 
       try {
-        // 1. Lê a planilha atual primeiro para detetar o que já lá se encontra
         let existingCodesInSheet = [];
         try {
           const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL + "?action=getCodes");
@@ -765,26 +785,27 @@
           if (result && Array.isArray(result.codes)) {
             existingCodesInSheet = result.codes.map(c => String(c).trim().toLowerCase());
           }
-        } catch(e) {
-          // Fallback se o Apps Script ainda não tiver o endpoint de leitura: assume verificação local ou envia com filtro
-        }
+        } catch(e) {}
 
         let newItemsToSend = [];
         let duplicateItemsFound = [];
 
         machines.forEach(m => {
           const codeTrim = String(m.code || '').trim().toLowerCase();
+          const sec = sectors.find(s => s.id === m.sector_id);
+          const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
+          const locationName = (floor ? floor.name + ' - ' : '') + (sec ? sec.name : 'Geral');
+
           if (existingCodesInSheet.includes(codeTrim)) {
             duplicateItemsFound.push({
               code: m.code,
               model: m.model || 'Não especificado',
-              sector: (sectors.find(s => s.id === m.sector_id) || {}).name || 'Geral',
-              reason: 'Já existe na planilha Google Sheets'
+              sector: locationName,
+              reason: 'Já existe na planilha'
             });
           } else {
-            const sec = sectors.find(s => s.id === m.sector_id);
             newItemsToSend.push({
-              sector: sec ? sec.name : 'Geral',
+              sector: locationName,
               ticket: m.ticket || '-', code: m.code || '-', model: m.model || '-',
               os: m.os || '-', status: m.status || '-',
               peripherals: Array.isArray(m.peripherals) ? m.peripherals.join(', ') : (m.peripherals || '-'),
@@ -803,7 +824,7 @@
         if (duplicateItemsFound.length > 0) {
           showDuplicatesReport(duplicateItemsFound);
         } else {
-          alert(`✅ Sincronização concluída!\nForam enviados ${newItemsToSend.length} novos registos. Nenhuma duplicata detetada na planilha.`);
+          alert(`✅ Sincronização concluída!\nForam enviados ${newItemsToSend.length} novos registos. Nenhuma duplicata detetada.`);
         }
 
       } catch (err) {
@@ -824,13 +845,12 @@
           <div class="bg-white p-2.5 rounded-lg border border-amber-200 text-xs flex justify-between items-center">
             <div>
               <span class="font-bold text-slate-800">${idx + 1}. Património: <strong class="text-blue-700">${item.code}</strong></span>
-              <p class="text-[11px] text-slate-500">Modelo: ${item.model} | Setor: ${item.sector}</p>
+              <p class="text-[11px] text-slate-500">Modelo: ${item.model} | Local: ${item.sector}</p>
             </div>
             <span class="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-1 rounded">⚠️ Duplicado</span>
           </div>
         `;
       });
-
       document.getElementById('modal-duplicates-report').classList.remove('hidden');
     }
 
@@ -889,7 +909,7 @@
     }
 
     function initApp() {
-      renderSectors();
+      renderFloorsAndSectors();
       document.getElementById('current-user-display').innerText = currentUser.username;
       document.getElementById('current-role-display').innerText = currentUser.role.toUpperCase();
     }
@@ -897,26 +917,36 @@
     async function loadDataFromServer() {
       if (!supabaseClient || !navigator.onLine) return;
       try {
-        const [secRes, macRes, usrRes] = await Promise.all([
+        const [floorRes, secRes, macRes, usrRes] = await Promise.all([
+          supabaseClient.from('floors').select('*'),
           supabaseClient.from('sectors').select('*'),
           supabaseClient.from('machines').select('*'),
           supabaseClient.from('users').select('*')
         ]);
+
+        const localFloors = JSON.parse(localStorage.getItem('reg_floors') || '[]');
+        const serverFloors = floorRes.data && Array.isArray(floorRes.data) ? floorRes.data : [];
+        const mergedFloors = [...serverFloors];
+        localFloors.forEach(lf => { if (!mergedFloors.some(mf => mf.id === lf.id)) mergedFloors.push(lf); });
+        floors = mergedFloors;
+
         const localSectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
         const serverSectors = secRes.data && Array.isArray(secRes.data) ? secRes.data : [];
-        
         const mergedSectors = [...serverSectors];
-        localSectors.forEach(ls => {
-          if (!mergedSectors.some(ms => ms.id === ls.id)) mergedSectors.push(ls);
-        });
+        localSectors.forEach(ls => { if (!mergedSectors.some(ms => ms.id === ls.id)) mergedSectors.push(ls); });
         sectors = mergedSectors;
 
         if (macRes.data) machines = macRes.data;
         if (usrRes.data) usersList = usrRes.data;
 
-        if (sectors.length === 0) {
-          sectors = [{ id: 'sec_default', name: 'Informatica', color: '#2563eb' }];
+        if (floors.length === 0) {
+          floors = [{ id: 'floor_1', name: 'Andar 1' }, { id: 'floor_2', name: 'Andar 2' }, { id: 'floor_3', name: 'Andar 3' }];
         }
+        if (sectors.length === 0) {
+          sectors = [{ id: 'sec_default', floor_id: floors[0].id, name: 'Informatica', color: '#2563eb' }];
+        }
+
+        localStorage.setItem('reg_floors', JSON.stringify(floors));
         localStorage.setItem('reg_sectors', JSON.stringify(sectors));
         localStorage.setItem('reg_machines', JSON.stringify(machines));
         localStorage.setItem('reg_users', JSON.stringify(usersList));
@@ -935,9 +965,12 @@
       if(!container) return;
       const q = query.toLowerCase().trim();
 
-      if (!q) { renderSectors(); return; }
+      if (!q) { renderFloorsAndSectors(); return; }
 
-      const matchedSectors = sectors.filter(s => s.name.toLowerCase().includes(q));
+      const matchedFloors = floors.filter(f => f.name.toLowerCase().includes(q));
+      const matchedFloorIds = matchedFloors.map(f => f.id);
+
+      const matchedSectors = sectors.filter(s => s.name.toLowerCase().includes(q) || matchedFloorIds.includes(s.floor_id));
       const matchedSectorIds = matchedSectors.map(s => s.id);
 
       const matchedMachines = machines.filter(m => 
@@ -959,7 +992,9 @@
 
       matchedMachines.forEach(m => {
         const sec = sectors.find(s => s.id === m.sector_id);
-        const sectorName = sec ? sec.name : 'Geral';
+        const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
+        const locationStr = (floor ? floor.name + ' > ' : '') + (sec ? sec.name : 'Geral');
+        
         const card = document.createElement('div');
         card.className = "bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 cursor-pointer hover:border-blue-300 transition-all";
         card.onclick = () => openMachineDetails(m.id);
@@ -975,7 +1010,7 @@
                 <span class="font-mono font-bold text-blue-700 text-sm">${m.code}</span>
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
               </div>
-              <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-blue-600 font-semibold">(${sectorName})</span></p>
+              <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-blue-600 font-semibold">(${locationStr})</span></p>
               ${m.os ? `<p class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-laptop mr-1"></i> SO: ${m.os}</p>` : ''}
               ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
               <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
@@ -1000,9 +1035,9 @@
       if(tab === 'sectors') {
         document.getElementById('view-sectors').classList.remove('hidden');
         document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-blue-600";
-        document.getElementById('app-title').innerText = "Sistemas & Setores";
+        document.getElementById('app-title').innerText = "Andares & Setores";
         currentSectorId = null;
-        renderSectors();
+        renderFloorsAndSectors();
       } else if(tab === 'admin') {
         document.getElementById('view-admin').classList.remove('hidden');
         document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
@@ -1074,18 +1109,123 @@
       }
     }
 
-    function renderSectors() {
-      updateDashboardStats();
-      const container = document.getElementById('sectors-list');
-      if(!container) return;
-      container.innerHTML = '';
+    // GESTÃO DE ANDARES (ABAS ESTILO NAVEGADOR)
+    function addNewFloorPrompt() {
+      const floorName = prompt("Digite o nome da nova aba/andar (ex: Andar 4, Subsolo, etc.):");
+      if (!floorName || !floorName.trim()) return;
+      const formatted = floorName.trim();
 
-      if (!sectors || sectors.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor cadastrado</p></div>`;
+      const newId = 'floor_' + Date.now();
+      const newFloor = { id: newId, name: formatted };
+      floors.push(newFloor);
+      currentFloorId = newId;
+
+      localStorage.setItem('reg_floors', JSON.stringify(floors));
+      if (supabaseClient && navigator.onLine) {
+        supabaseClient.from('floors').upsert([newFloor]).then();
+      }
+      renderFloorsAndSectors();
+    }
+
+    function editCurrentFloor() {
+      const f = floors.find(x => x.id === currentFloorId);
+      if(!f) return;
+      const newName = prompt("Renomear andar/aba:", f.name);
+      if (!newName || !newName.trim()) return;
+      f.name = newName.trim();
+
+      localStorage.setItem('reg_floors', JSON.stringify(floors));
+      if (supabaseClient && navigator.onLine) {
+        supabaseClient.from('floors').upsert([{ id: f.id, name: f.name }]).then();
+      }
+      renderFloorsAndSectors();
+    }
+
+    async function deleteCurrentFloor() {
+      if (floors.length <= 1) {
+        alert("⚠️ Precisa de manter pelo menos um andar criado no sistema.");
         return;
       }
+      const f = floors.find(x => x.id === currentFloorId);
+      if (!f) return;
 
-      const sortedSectors = [...sectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
+      if (confirm(`Tem certeza que deseja eliminar o andar "${f.name}" e todas as pastas e máquinas associadas a ele?`)) {
+        const sectorIdsToDelete = sectors.filter(s => s.floor_id === f.id).map(s => s.id);
+        
+        floors = floors.filter(x => x.id !== f.id);
+        sectors = sectors.filter(s => s.floor_id !== f.id);
+        machines = machines.filter(m => !sectorIdsToDelete.includes(m.sector_id));
+
+        localStorage.setItem('reg_floors', JSON.stringify(floors));
+        localStorage.setItem('reg_sectors', JSON.stringify(sectors));
+        localStorage.setItem('reg_machines', JSON.stringify(machines));
+
+        if (supabaseClient && navigator.onLine) {
+          await supabaseClient.from('floors').delete().eq('id', f.id);
+        }
+
+        currentFloorId = floors[0].id;
+        renderFloorsAndSectors();
+      }
+    }
+
+    // GESTÃO DE SETORES / PASTAS (ORDEM ALFABÉTICA)
+    function renderFloorsAndSectors() {
+      updateDashboardStats();
+      const floorsContainer = document.getElementById('floors-tabs-container');
+      const sectorsContainer = document.getElementById('sectors-list');
+      if(!floorsContainer || !sectorsContainer) return;
+
+      floorsContainer.innerHTML = '';
+      sectorsContainer.innerHTML = '';
+
+      if (!floors || floors.length === 0) {
+        floors = [{ id: 'floor_1', name: 'Andar 1' }, { id: 'floor_2', name: 'Andar 2' }, { id: 'floor_3', name: 'Andar 3' }];
+      }
+
+      // Ordena andares alfabeticamente A-Z
+      const sortedFloors = [...floors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
+
+      if (!currentFloorId || !sortedFloors.some(f => f.id === currentFloorId)) {
+        currentFloorId = sortedFloors[0].id;
+      }
+
+      // Renderiza as abas dos andares estilo navegador
+      sortedFloors.forEach(f => {
+        const isCurrent = f.id === currentFloorId;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => { currentFloorId = f.id; renderFloorsAndSectors(); };
+        btn.className = `px-4 py-2 rounded-t-xl font-bold shadow-sm whitespace-nowrap transition-all flex items-center gap-1.5 border-t border-x ${isCurrent ? 'bg-white text-indigo-900 border-indigo-400 shadow-inner' : 'bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300'}`;
+        btn.innerHTML = `<i class="fa-solid fa-layer-group text-xs"></i> ${f.name}`;
+        floorsContainer.appendChild(btn);
+      });
+
+      // Botão [+] estilo navegador para adicionar nova aba/andar
+      const addTabBtn = document.createElement('button');
+      addTabBtn.type = 'button';
+      addTabBtn.onclick = () => addNewFloorPrompt();
+      addTabBtn.className = "px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 shadow-sm transition flex items-center justify-center text-xs";
+      addTabBtn.title = "Adicionar novo andar (Aba)";
+      addTabBtn.innerHTML = `<i class="fa-solid fa-plus text-sm"></i>`;
+      floorsContainer.appendChild(addTabBtn);
+
+      const activeFloor = floors.find(f => f.id === currentFloorId);
+      if (activeFloor) {
+        document.getElementById('current-floor-title').innerText = activeFloor.name;
+        document.getElementById('current-floor-subtitle').innerText = `Inventário e pastas do ${activeFloor.name}`;
+        document.getElementById('btn-edit-floor').classList.remove('hidden');
+        document.getElementById('btn-delete-floor').classList.remove('hidden');
+      }
+
+      // Filtra e Ordena as pastas/setores do andar atual em ordem alfabética A-Z
+      const floorSectors = sectors.filter(s => s.floor_id === currentFloorId);
+      const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
+
+      if (sortedSectors.length === 0) {
+        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
+        return;
+      }
 
       sortedSectors.forEach(sec => {
         const count = machines.filter(m => m.sector_id === sec.id).length;
@@ -1110,15 +1250,17 @@
             <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
           </div>
         `;
-        container.appendChild(card);
+        sectorsContainer.appendChild(card);
       });
     }
 
     function openFolderModal() {
+      const activeFloor = floors.find(f => f.id === currentFloorId);
+      document.getElementById('folder-floor-display').value = activeFloor ? activeFloor.name : 'Andar Atual';
       document.getElementById('folder-id').value = '';
       document.getElementById('folder-name').value = '';
       document.getElementById('folder-color').value = '#2563eb';
-      document.getElementById('modal-folder-title').innerText = 'Novo Setor';
+      document.getElementById('modal-folder-title').innerText = 'Novo Setor / Pasta';
       document.getElementById('modal-folder').classList.remove('hidden');
     }
     function closeFolderModal() { document.getElementById('modal-folder').classList.add('hidden'); }
@@ -1126,6 +1268,7 @@
     async function saveFolder(e) {
       e.preventDefault();
       const id = document.getElementById('folder-id').value;
+      const floor_id = currentFloorId;
       const name = document.getElementById('folder-name').value.trim();
       const color = document.getElementById('folder-color').value;
       if(!name) return;
@@ -1133,22 +1276,25 @@
       if(id) {
         const sec = sectors.find(s => s.id === id);
         if(sec) { sec.name = name; sec.color = color; }
-        if (supabaseClient && navigator.onLine) await supabaseClient.from('sectors').upsert([{ id, name, color }]);
+        if (supabaseClient && navigator.onLine) await supabaseClient.from('sectors').upsert([{ id, floor_id, name, color }]);
       } else {
         const newId = 'sec_' + Date.now();
-        const newSector = { id: newId, name, color };
+        const newSector = { id: newId, floor_id, name, color };
         sectors.push(newSector);
         if (supabaseClient && navigator.onLine) await supabaseClient.from('sectors').upsert([newSector]);
       }
 
       localStorage.setItem('reg_sectors', JSON.stringify(sectors));
       closeFolderModal();
-      renderSectors();
+      renderFloorsAndSectors();
     }
 
     function editFolder(id) {
       const sec = sectors.find(s => s.id === id);
       if(!sec) return;
+
+      const floor = floors.find(f => f.id === sec.floor_id);
+      document.getElementById('folder-floor-display').value = floor ? floor.name : 'Andar Atual';
       document.getElementById('folder-id').value = sec.id;
       document.getElementById('folder-name').value = sec.name;
       document.getElementById('folder-color').value = sec.color || '#2563eb';
@@ -1163,7 +1309,7 @@
         localStorage.setItem('reg_sectors', JSON.stringify(sectors));
         localStorage.setItem('reg_machines', JSON.stringify(machines));
         if (supabaseClient && navigator.onLine) await supabaseClient.from('sectors').delete().eq('id', id);
-        renderSectors();
+        renderFloorsAndSectors();
       }
     }
 
@@ -1257,8 +1403,11 @@
       const m = machines.find(item => item.id === machineId);
       if (!m) return;
       const sec = sectors.find(s => s.id === m.sector_id);
+      const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
+      const locationStr = (floor ? floor.name + ' > ' : '') + (sec ? sec.name : 'Geral');
+
       document.getElementById('detail-ticket').innerText = m.ticket || '-';
-      document.getElementById('detail-sector').innerText = sec ? sec.name : 'Geral';
+      document.getElementById('detail-sector').innerText = locationStr;
       document.getElementById('detail-code').innerText = m.code;
       document.getElementById('detail-model').innerText = m.model || '-';
       document.getElementById('detail-os').innerText = m.os || '-';
@@ -1391,7 +1540,8 @@
 
             if (!sec) {
               sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-              const newSector = { id: sectorId, name: sectorNameRaw, color: '#2563eb' };
+              const defaultFloorId = currentFloorId || floors[0].id;
+              const newSector = { id: sectorId, floor_id: defaultFloorId, name: sectorNameRaw, color: '#2563eb' };
               sectors.push(newSector);
               if (supabaseClient && navigator.onLine) await supabaseClient.from('sectors').upsert([newSector]);
             }
@@ -1415,7 +1565,7 @@
           localStorage.setItem('reg_sectors', JSON.stringify(sectors));
           localStorage.setItem('reg_machines', JSON.stringify(machines));
           alert(`Importadas ${count} máquinas com sucesso!`);
-          renderSectors();
+          renderFloorsAndSectors();
         } catch (err) { alert("Erro ao importar."); }
         finally { e.target.value = ''; }
       };
@@ -1446,7 +1596,7 @@
           if(currentBase64Photo) m.photo_url = currentBase64Photo;
         }
         if (supabaseClient && navigator.onLine) {
-          if (sec) await supabaseClient.from('sectors').upsert([{ id: sec.id, name: sec.name, color: sec.color || '#2563eb' }]);
+          if (sec) await supabaseClient.from('sectors').upsert([{ id: sec.id, floor_id: sec.floor_id, name: sec.name, color: sec.color || '#2563eb' }]);
           await supabaseClient.from('machines').update({ code, model, status, peripherals, notes, photo_url: currentBase64Photo }).eq('id', editId);
         }
       } else {
@@ -1460,7 +1610,7 @@
         };
 
         if (supabaseClient && navigator.onLine) {
-          if (sec) await supabaseClient.from('sectors').upsert([{ id: sec.id, name: sec.name, color: sec.color || '#2563eb' }]);
+          if (sec) await supabaseClient.from('sectors').upsert([{ id: sec.id, floor_id: sec.floor_id, name: sec.name, color: sec.color || '#2563eb' }]);
           await supabaseClient.from('machines').insert([newMachine]);
         }
         machines.push(newMachine);
@@ -1492,7 +1642,9 @@
       const container = document.getElementById('export-sectors-checkboxes');
       container.innerHTML = '';
       sectors.forEach(sec => {
-        container.innerHTML += `<label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded"><input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 w-4 h-4"><span class="font-medium text-slate-700">${sec.name}</span></label>`;
+        const floor = floors.find(f => f.id === sec.floor_id);
+        const labelName = (floor ? floor.name + ' - ' : '') + sec.name;
+        container.innerHTML += `<label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded"><input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 w-4 h-4"><span class="font-medium text-slate-700">${labelName}</span></label>`;
       });
       document.getElementById('modal-export').classList.remove('hidden');
     }
@@ -1506,10 +1658,11 @@
       if (selectedSectorIds.length === 0) { alert("Selecione pelo menos um setor."); return; }
       const filtered = machines.filter(m => selectedSectorIds.includes(m.sector_id));
       
-      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimónio\tModelo\tSO\tEstado\tPeriféricos\tObservações\tData\n";
+      let fileContent = "\uFEFFAndar\tSetor\tNº Ticket\tPatrimónio\tModelo\tSO\tEstado\tPeriféricos\tObservações\tData\n";
       filtered.forEach(m => {
         const sec = sectors.find(s => s.id === m.sector_id);
-        fileContent += `${sec ? sec.name : 'Geral'}\t${m.ticket}\t${m.code}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
+        const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
+        fileContent += `${floor ? floor.name : 'Geral'}\t${sec ? sec.name : 'Geral'}\t${m.ticket}\t${m.code}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
       });
       const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
       const link = document.createElement("a");
