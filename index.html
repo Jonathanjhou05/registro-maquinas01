@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Registo de Máquinas - Nuvem & Offline</title>
+  <title>Registro de Máquinas - Nuvem & Offline</title>
 
   <!-- PWA Metadata -->
   <link rel="manifest" href="manifest.json">
@@ -37,7 +37,7 @@
 
   <!-- INDICADOR DE ESTADO DE CONEXÃO -->
   <div id="offline-banner" class="hidden bg-amber-500 text-white text-[11px] font-semibold text-center py-1 px-2 flex items-center justify-center gap-1.5 flex-none z-30 shadow-inner">
-    <i class="fa-solid fa-triangle-exclamation"></i> Encontra-se offline. As alterações serão salvas localmente e sincronizadas quando a ligação for restabelecida.
+    <i class="fa-solid fa-triangle-exclamation"></i> Você está offline. As alterações serão salvas localmente e sincronizadas quando a conexão voltar.
   </div>
 
   <!-- LOGIN VIEW -->
@@ -64,7 +64,7 @@
           <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
-            <input type="password" id="login-password" required placeholder="A sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="password" id="login-password" required placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
 
@@ -92,7 +92,7 @@
       <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Sistemas & Setores</h1>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="forceSyncWithGoogleSheets()" title="Atualizar Folha Online (F5)" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
+      <button onclick="forceSyncWithGoogleSheets()" title="Atualizar Planilha Online (F5)" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
         <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Sync Sheets</span>
       </button>
       <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer">
@@ -134,7 +134,7 @@
       <!-- BARRA DE PESQUISA GLOBAL -->
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar pasta, património, modelo ou obs..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar patrimônio, modelo ou observação..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
       </div>
 
       <div class="flex justify-between items-center mb-2 pt-1">
@@ -152,7 +152,7 @@
       <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
         <div>
           <h2 id="current-sector-title" class="font-bold text-base text-slate-800">Setor</h2>
-          <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registadas</p>
+          <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registradas</p>
         </div>
         <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
           <i class="fa-solid fa-plus"></i> Cadastrar
@@ -177,14 +177,14 @@
       <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center hidden">
         <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
         <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Administrador</h3>
-        <p class="text-xs text-slate-500 mt-1">Apenas contas com perfil ADMIN podem gerir utilizadores e auditorias.</p>
+        <p class="text-xs text-slate-500 mt-1">Apenas contas com perfil ADMIN podem gerenciar utilizadores e auditorias.</p>
       </div>
 
       <div id="admin-panel" class="space-y-4">
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
           <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-users-gear mr-1 text-blue-600"></i> Gerir Utilizadores</h3>
-            <button onclick="openUserModal()" class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">+ Novo Utilizador</button>
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-users-gear mr-1 text-blue-600"></i> Gerenciar Utilizadores</h3>
+            <button onclick="openUserModal()" class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">+ Novo Usuário</button>
           </div>
           <div id="users-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
         </div>
@@ -251,7 +251,7 @@
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end gap-2">
         <button type="button" onclick="closeExportModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
         <button type="button" onclick="generateAndDownloadCSV()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow flex items-center gap-1.5">
-          <i class="fa-solid fa-download"></i> Baixar Folha (Excel)
+          <i class="fa-solid fa-download"></i> Baixar Planilha (Excel)
         </button>
       </div>
     </div>
@@ -281,7 +281,7 @@
             <span id="detail-sector" class="font-bold text-slate-800">-</span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Património / Código:</span>
+            <span class="text-slate-500 font-semibold">Patrimônio / Código:</span>
             <span id="detail-code" class="font-mono font-bold text-blue-700 text-sm"></span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
@@ -330,7 +330,7 @@
       <form onsubmit="saveUser(event)" class="p-5 space-y-3">
         <input type="hidden" id="user-id">
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome de Utilizador</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome de Usuário</label>
           <input type="text" id="modal-username" required placeholder="Ex: tecnico01" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
@@ -365,13 +365,6 @@
           <label class="block text-xs font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
           <input type="text" id="folder-name" required placeholder="Ex: Informatica, RH, Recepção..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Cor da Pasta</label>
-          <div class="flex items-center gap-3">
-            <input type="color" id="folder-color" value="#2563eb" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer p-1 bg-white">
-            <span class="text-xs text-slate-500">Selecione a cor do ícone ou destaque da pasta</span>
-          </div>
-        </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeFolderModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
           <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
@@ -392,7 +385,7 @@
         <input type="hidden" id="edit-machine-id">
 
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Património</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Patrimônio</label>
           <div class="flex gap-2">
             <input type="text" id="machine-code" required placeholder="Digite ou escaneie o código" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
             <button type="button" onclick="startScanner()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
@@ -787,12 +780,12 @@
 
     async function forceSyncWithGoogleSheets() {
       if (!navigator.onLine) {
-        alert("⚠️ Encontra-se offline. Conecte-se à internet para atualizar a folha online.");
+        alert("⚠️ Você está offline. Conecte-se à internet para atualizar a planilha online.");
         return;
       }
 
       if (!machines || machines.length === 0) {
-        alert("⚠️ Não existem máquinas registadas para sincronizar.");
+        alert("⚠️ Não existem máquinas registradas para sincronizar.");
         return;
       }
 
@@ -834,7 +827,7 @@
 
       btn.innerHTML = originalHtml;
       btn.disabled = false;
-      alert(`✅ Sincronização concluída!\nForam enviadas ${successCount} de ${machines.length} máquinas para a folha online.`);
+      alert(`✅ Sincronização concluída!\nForam enviadas ${successCount} de ${machines.length} máquinas para a planilha online.`);
     }
 
     async function handleLogin(e) {
@@ -938,24 +931,12 @@
           supabaseClient.from('users').select('*')
         ]);
 
-        // MESCLAGEM INTELIGENTE DE SETORES (Servidor + LocalStorage) para evitar perda de dados locais
-        const localSectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
-        const serverSectors = secRes.data && Array.isArray(secRes.data) ? secRes.data : [];
-        
-        const mergedSectors = [...serverSectors];
-        localSectors.forEach(ls => {
-          if (!mergedSectors.some(ms => ms.id === ls.id)) {
-            mergedSectors.push(ls);
-          }
-        });
-
-        sectors = mergedSectors;
-
+        if (secRes.data && Array.isArray(secRes.data)) sectors = secRes.data;
         if (macRes.data && Array.isArray(macRes.data)) machines = macRes.data;
         if (usrRes.data && Array.isArray(usrRes.data)) usersList = usrRes.data;
 
         if (sectors.length === 0) {
-          const defaultSec = { id: 'sec_default', name: 'Informatica', color: '#2563eb' };
+          const defaultSec = { id: 'sec_default', name: 'Informatica' };
           await supabaseClient.from('sectors').insert([defaultSec]);
           sectors = [defaultSec];
         }
@@ -970,7 +951,7 @@
         localStorage.setItem('reg_users', JSON.stringify(usersList));
 
       } catch (err) {
-        console.warn("Modo offline ativo - a utilizar dados locais armazenados:", err);
+        console.warn("Modo offline ativo - usando dados locais armazenados:", err);
       }
     }
 
@@ -1001,11 +982,7 @@
         return;
       }
 
-      const matchedSectors = sectors.filter(s => s.name.toLowerCase().includes(q));
-      const matchedSectorIds = matchedSectors.map(s => s.id);
-
       const matchedMachines = machines.filter(m => 
-        matchedSectorIds.includes(m.sector_id) ||
         (m.code && m.code.toLowerCase().includes(q)) || 
         (m.model && m.model.toLowerCase().includes(q)) || 
         (m.ticket && m.ticket.toLowerCase().includes(q)) ||
@@ -1017,7 +994,7 @@
       container.innerHTML = `<h3 class="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Resultados da Pesquisa (${matchedMachines.length})</h3>`;
 
       if (matchedMachines.length === 0) {
-        container.innerHTML += `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-500">Nenhum resultado encontrado para "${q}".</div>`;
+        container.innerHTML += `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-500">Nenhum equipamento encontrado para "${q}".</div>`;
         return;
       }
 
@@ -1081,7 +1058,7 @@
         document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-blue-600";
         document.getElementById('app-title').innerText = "Sistemas & Setores";
         currentSectorId = null;
-        renderSectors();
+        loadDataFromServer().then(() => renderSectors());
       } else if(tab === 'admin') {
         document.getElementById('view-admin').classList.remove('hidden');
         document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
@@ -1114,7 +1091,7 @@
     async function loadUsersManagement() {
       const container = document.getElementById('users-list');
       if(!container) return;
-      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">A carregar utilizadores...</p>';
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando utilizadores...</p>';
       try {
         if(supabaseClient && navigator.onLine) {
           const { data } = await supabaseClient.from('users').select('*');
@@ -1167,7 +1144,7 @@
         }
       } catch(err) { console.error(err); }
 
-      await logAuditAction("Criou Utilizador", `Novo utilizador criado: ${username} (${role})`);
+      await logAuditAction("Criou Usuário", `Novo utilizador criado: ${username} (${role})`);
       closeUserModal();
       await loadUsersManagement();
     }
@@ -1179,7 +1156,7 @@
         localStorage.setItem('reg_users', JSON.stringify(usersList));
 
         try { if(supabaseClient && navigator.onLine) await supabaseClient.from('users').delete().eq('id', id); } catch(e){}
-        await logAuditAction("Removeu Utilizador", `Utilizador removido: ${username}`);
+        await logAuditAction("Removeu Usuário", `Utilizador removido: ${username}`);
         await loadUsersManagement();
       }
     }
@@ -1195,20 +1172,14 @@
         return;
       }
 
-      const sortedSectors = [...sectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
-
-      sortedSectors.forEach(sec => {
+      sectors.forEach(sec => {
         const count = machines.filter(m => m.sector_id === sec.id).length;
-        const folderColor = sec.color || '#2563eb';
-
         const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between cursor-pointer hover:border-blue-300 transition-all";
+        card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between cursor-pointer";
         card.onclick = () => openSectorItems(sec.id);
         card.innerHTML = `
           <div class="flex items-center gap-3.5">
-            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg shadow-sm" style="background-color: ${folderColor}20; color: ${folderColor};">
-              <i class="fa-solid fa-folder"></i>
-            </div>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg"><i class="fa-solid fa-folder"></i></div>
             <div>
               <h3 class="font-bold text-slate-800 text-sm">${sec.name}</h3>
               <span class="text-xs text-slate-500">${count} máquina${count !== 1 ? 's' : ''}</span>
@@ -1227,7 +1198,6 @@
     function openFolderModal() {
       document.getElementById('folder-id').value = '';
       document.getElementById('folder-name').value = '';
-      document.getElementById('folder-color').value = '#2563eb';
       document.getElementById('modal-folder-title').innerText = 'Novo Setor';
       document.getElementById('modal-folder').classList.remove('hidden');
     }
@@ -1237,34 +1207,28 @@
       e.preventDefault();
       const id = document.getElementById('folder-id').value;
       const name = document.getElementById('folder-name').value.trim();
-      const color = document.getElementById('folder-color').value;
       if(!name) return;
 
       if(id) {
         const sec = sectors.find(s => s.id === id);
-        if(sec) {
-          sec.name = name;
-          sec.color = color;
-        }
+        if(sec) sec.name = name;
         try {
           if(supabaseClient && navigator.onLine) {
-            await supabaseClient.from('sectors').upsert([{ id, name, color }]);
+            await supabaseClient.from('sectors').update({ name }).eq('id', id);
           }
-        } catch(e){ console.error("Erro ao atualizar setor no banco:", e); }
+        } catch(e){}
         await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
       } else {
         const newId = 'sec_' + Date.now();
-        const newSector = { id: newId, name, color };
+        const newSector = { id: newId, name };
         sectors.push(newSector);
         try {
           if(supabaseClient && navigator.onLine) {
-            await supabaseClient.from('sectors').upsert([newSector]);
+            await supabaseClient.from('sectors').insert([newSector]);
           }
-        } catch(e){ console.error("Erro ao inserir setor no banco:", e); }
+        } catch(e){}
         await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
       }
-
-      // SALVA NO STORAGE LOCAL IMEDIATAMENTE
       localStorage.setItem('reg_sectors', JSON.stringify(sectors));
       closeFolderModal();
       renderSectors();
@@ -1275,8 +1239,7 @@
       if(!sec) return;
       document.getElementById('folder-id').value = sec.id;
       document.getElementById('folder-name').value = sec.name;
-      document.getElementById('folder-color').value = sec.color || '#2563eb';
-      document.getElementById('modal-folder-title').innerText = 'Editar Setor';
+      document.getElementById('modal-folder-title').innerText = 'Renomear Setor';
       document.getElementById('modal-folder').classList.remove('hidden');
     }
 
@@ -1300,6 +1263,8 @@
       currentSectorId = sectorId;
       currentFilterStatus = 'Todos';
       highlightFilterButton('Todos');
+      
+      await loadDataFromServer();
 
       const sec = sectors.find(s => s.id === sectorId);
       if(!sec) return;
@@ -1396,7 +1361,7 @@
       document.getElementById('detail-os').innerText = m.os || 'Não informado';
       document.getElementById('detail-status').innerText = m.status;
       document.getElementById('detail-peripherals').innerText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum';
-      document.getElementById('detail-date').innerText = m.date || 'Não registada';
+      document.getElementById('detail-date').innerText = m.date || 'Não registrada';
       document.getElementById('detail-notes').innerText = m.notes || 'Nenhuma observação informada.';
 
       const photoContainer = document.getElementById('detail-photo-container');
@@ -1537,7 +1502,7 @@
           const rows = XLSX.utils.sheet_to_json(worksheet);
 
           if (!rows || rows.length === 0) {
-            alert("⚠️ A folha está vazia ou não pôde ser lida.");
+            alert("⚠️ A planilha está vazia ou não pôde ser lida.");
             return;
           }
 
@@ -1548,7 +1513,7 @@
 
           for (const row of rows) {
             const sectorNameRaw = String(row['SETOR'] || row['Setor'] || row['setor'] || 'GERAL').trim().toUpperCase();
-            const code = String(row['PATRIMÔNIO'] || row['Património'] || row['Código'] || row['PATRIMONIO'] || row['codigo'] || '').trim();
+            const code = String(row['PATRIMÔNIO'] || row['Patrimônio'] || row['Código'] || row['PATRIMONIO'] || row['codigo'] || '').trim();
             
             if (!code || !sectorNameRaw) {
               if (code || sectorNameRaw) {
@@ -1568,14 +1533,13 @@
 
             if (!sec) {
               sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-              const newSector = { id: sectorId, name: sectorNameRaw, color: '#2563eb' };
+              const newSector = { id: sectorId, name: sectorNameRaw };
               sectors.push(newSector);
-              sec = newSector;
               importedSectorsCount++;
-            }
-
-            if (supabaseClient && navigator.onLine) {
-              await supabaseClient.from('sectors').upsert([{ id: sec.id, name: sec.name, color: sec.color || '#2563eb' }]);
+              
+              if (supabaseClient && navigator.onLine) {
+                await supabaseClient.from('sectors').insert([newSector]);
+              }
             }
 
             const model = String(row['CONJUNTO/ LENOVO'] || row['Modelo'] || row['modelo'] || 'POSITIVO').trim();
@@ -1632,7 +1596,7 @@
           localStorage.setItem('reg_sectors', JSON.stringify(sectors));
           localStorage.setItem('reg_machines', JSON.stringify(machines));
 
-          await logAuditAction("Importou Folha", `Importados ${importedSectorsCount} setores e ${importedMachinesCount} máquinas. Ignoradas ${skippedDuplicates.length} duplicadas.`);
+          await logAuditAction("Importou Planilha", `Importados ${importedSectorsCount} setores e ${importedMachinesCount} máquinas. Ignoradas ${skippedDuplicates.length} duplicadas.`);
           
           let reportMsg = `📊 Relatório da Importação:\n\n`;
           reportMsg += `✅ Máquinas importadas com sucesso: ${importedMachinesCount}\n`;
@@ -1649,7 +1613,7 @@
           renderSectors();
         } catch (err) {
           console.error("Erro ao importar Excel:", err);
-          alert("❌ Erro ao processar o ficheiro Excel: " + (err.message || err));
+          alert("❌ Erro ao processar o arquivo Excel: " + (err.message || err));
         } finally {
           e.target.value = '';
         }
@@ -1674,7 +1638,7 @@
       if (existingMachine) {
         const foundSector = sectors.find(s => s.id === existingMachine.sector_id);
         const sectorName = foundSector ? foundSector.name : 'outro setor';
-        alert(`⚠️ Atenção: A máquina com o património/código "${code}" já está cadastrada no sistema (Setor: ${sectorName})!`);
+        alert(`⚠️ Atenção: A máquina com o patrimônio/código "${code}" já está cadastrada no sistema (Setor: ${sectorName})!`);
         return;
       }
 
@@ -1700,9 +1664,6 @@
 
         try {
           if (supabaseClient && navigator.onLine) {
-            if (sec) {
-              await supabaseClient.from('sectors').upsert([{ id: sec.id, name: sec.name, color: sec.color || '#2563eb' }]);
-            }
             const { error } = await supabaseClient.from('machines').update(updatePayload).eq('id', editId);
             if (error) throw error;
           } else {
@@ -1715,7 +1676,7 @@
           return;
         }
 
-        await logAuditAction("Editou Máquina", `Património: ${code}`);
+        await logAuditAction("Editou Máquina", `Patrimônio: ${code}`);
       } else {
         let prefix = "GER";
         if (sec && sec.name) {
@@ -1751,12 +1712,6 @@
         
         try {
           if (supabaseClient && navigator.onLine) {
-            // GARANTIA CRUCIAL: Assegura que o setor existe no Supabase antes de inserir a máquina (evita erro FK)
-            if (sec) {
-              const { error: secError } = await supabaseClient.from('sectors').upsert([{ id: sec.id, name: sec.name, color: sec.color || '#2563eb' }]);
-              if (secError) throw secError;
-            }
-
             const { error } = await supabaseClient.from('machines').insert([newMachine]);
             if (error) throw error;
             syncToGoogleSheets(sheetPayload);
@@ -1767,7 +1722,7 @@
               sheetPayload: sheetPayload 
             });
             saveOfflineQueueToStorage();
-            alert("📦 Sem ligação: Máquina salva localmente!");
+            alert("📦 Sem conexão: Máquina salva localmente!");
           }
         } catch(err) {
           console.error("Erro Supabase Insert:", err);
@@ -1776,7 +1731,7 @@
         }
 
         machines.push(newMachine);
-        await logAuditAction("Cadastrou Máquina", `Património: ${code} (Ticket gerado: ${ticket})`);
+        await logAuditAction("Cadastrou Máquina", `Patrimônio: ${code} (Ticket gerado: ${ticket})`);
       }
 
       localStorage.setItem('reg_machines', JSON.stringify(machines));
@@ -1840,7 +1795,7 @@
       
       const filteredMachines = machines.filter(m => selectedSectorIds.includes(m.sector_id));
       
-      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimónio/Código\tModelo/Tipo\tSistema Operacional\tEstado\tPeriféricos\tObservações\tData de Registo\n";
+      let fileContent = "\uFEFFSetor\tNº Ticket\tPatrimônio/Código\tModelo/Tipo\tSistema Operacional\tEstado\tPeriféricos\tObservações\tData de Cadastro\n";
       
       filteredMachines.forEach(m => {
         const sec = sectors.find(s => s.id === m.sector_id);
@@ -1871,7 +1826,7 @@
     async function loadAuditLogs() {
       const container = document.getElementById('audit-logs-list');
       if(!container) return;
-      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">A carregar logs...</p>';
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Carregando logs...</p>';
       let data = [];
       try {
         if(supabaseClient && navigator.onLine) {
@@ -1880,7 +1835,7 @@
         }
       } catch(e){}
       
-      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registo.</p>'; return; }
+      if(!data || data.length === 0) { container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum registro.</p>'; return; }
       container.innerHTML = '';
       data.forEach(log => {
         const item = document.createElement('div');
