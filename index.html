@@ -131,7 +131,7 @@
         </div>
       </div>
 
-      <!-- BARRA DE PESQUISA GLOBAL (Pesquisa por patrimônio, modelo, observação ou pasta) -->
+      <!-- BARRA DE PESQUISA GLOBAL -->
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
         <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar pasta, patrimônio, modelo ou obs..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
@@ -352,7 +352,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD/EDIT SECTOR (COM OPÇÃO DE COR) -->
+  <!-- MODAL: ADD/EDIT SECTOR -->
   <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -989,11 +989,9 @@
         return;
       }
 
-      // Procura pastas que correspondem à pesquisa
       const matchedSectors = sectors.filter(s => s.name.toLowerCase().includes(q));
       const matchedSectorIds = matchedSectors.map(s => s.id);
 
-      // Procura máquinas que correspondem à pesquisa ou pertencem a pastas encontradas
       const matchedMachines = machines.filter(m => 
         matchedSectorIds.includes(m.sector_id) ||
         (m.code && m.code.toLowerCase().includes(q)) || 
@@ -1185,7 +1183,6 @@
         return;
       }
 
-      // ORDENAÇÃO ALFABÉTICA DAS PASTAS (A-Z)
       const sortedSectors = [...sectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       sortedSectors.forEach(sec => {
@@ -1254,6 +1251,8 @@
         } catch(e){}
         await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
       }
+
+      // GARANTE A PERSISTÊNCIA CORRETA NO LOCALSTORAGE IMEDIATAMENTE
       localStorage.setItem('reg_sectors', JSON.stringify(sectors));
       closeFolderModal();
       renderSectors();
