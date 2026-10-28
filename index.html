@@ -938,7 +938,19 @@
           supabaseClient.from('users').select('*')
         ]);
 
-        if (secRes.data && Array.isArray(secRes.data)) sectors = secRes.data;
+        // MESCLAGEM INTELIGENTE DE SETORES (Servidor + LocalStorage)
+        const localSectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
+        const serverSectors = secRes.data && Array.isArray(secRes.data) ? secRes.data : [];
+        
+        const mergedSectors = [...serverSectors];
+        localSectors.forEach(ls => {
+          if (!mergedSectors.some(ms => ms.id === ls.id)) {
+            mergedSectors.push(ls);
+          }
+        });
+
+        sectors = mergedSectors;
+
         if (macRes.data && Array.isArray(macRes.data)) machines = macRes.data;
         if (usrRes.data && Array.isArray(usrRes.data)) usersList = usrRes.data;
 
@@ -1069,7 +1081,7 @@
         document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-blue-600";
         document.getElementById('app-title').innerText = "Sistemas & Setores";
         currentSectorId = null;
-        loadDataFromServer().then(() => renderSectors());
+        renderSectors();
       } else if(tab === 'admin') {
         document.getElementById('view-admin').classList.remove('hidden');
         document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
@@ -1236,9 +1248,9 @@
         }
         try {
           if(supabaseClient && navigator.onLine) {
-            await supabaseClient.from('sectors').update({ name, color }).eq('id', id);
+            await supabaseClient.from('sectors').upsert([{ id, name, color }]);
           }
-        } catch(e){}
+        } catch(e){ console.error("Erro ao atualizar setor no banco:", e); }
         await logAuditAction("Renomeou Setor", `Setor alterado para: ${name}`);
       } else {
         const newId = 'sec_' + Date.now();
@@ -1248,11 +1260,11 @@
           if(supabaseClient && navigator.onLine) {
             await supabaseClient.from('sectors').insert([newSector]);
           }
-        } catch(e){}
+        } catch(e){ console.error("Erro ao inserir setor no banco:", e); }
         await logAuditAction("Criou Setor", `Novo setor criado: ${name}`);
       }
 
-      // GARANTE A PERSISTÊNCIA CORRETA NO LOCALSTORAGE IMEDIATAMENTE
+      // SALVA NO STORAGE LOCAL IMEDIATAMENTE
       localStorage.setItem('reg_sectors', JSON.stringify(sectors));
       closeFolderModal();
       renderSectors();
@@ -1288,8 +1300,6 @@
       currentSectorId = sectorId;
       currentFilterStatus = 'Todos';
       highlightFilterButton('Todos');
-      
-      await loadDataFromServer();
 
       const sec = sectors.find(s => s.id === sectorId);
       if(!sec) return;
@@ -1563,7 +1573,7 @@
               importedSectorsCount++;
               
               if (supabaseClient && navigator.onLine) {
-                await supabaseClient.from('sectors').insert([newSector]);
+                await supabaseClient.from('sectors').upsert([newSector]);
               }
             }
 
