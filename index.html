@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Inventário Maq HOB - Nuvem & Offline</title>
+  <title>Registo de Máquinas - Nuvem & Offline</title>
 
   <!-- PWA Metadata -->
   <link rel="manifest" href="manifest.json">
@@ -276,7 +276,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD/EDIT SECTOR (PASTA) -->
+  <!-- MODAL: ADD/EDIT SECTOR (PASTA COM OPÇÃO DE MOVER ANDAR) -->
   <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -286,8 +286,10 @@
       <form onsubmit="saveFolder(event)" class="p-5 space-y-4 text-xs">
         <input type="hidden" id="folder-id">
         <div>
-          <label class="block font-semibold text-slate-600 mb-1">Andar Atual</label>
-          <input type="text" id="folder-floor-display" readonly class="w-full border border-slate-200 rounded-lg p-2.5 text-sm bg-slate-50 font-bold text-indigo-900">
+          <label class="block font-semibold text-slate-600 mb-1">Andar de Destino (Mover Pasta)</label>
+          <select id="folder-floor-id" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-indigo-900">
+            <!-- Gerado dinamicamente -->
+          </select>
         </div>
         <div>
           <label class="block font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
@@ -302,7 +304,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeFolderModal()" class="px-4 py-2 font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-          <button type="submit" class="px-4 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar Pasta</button>
+          <button type="submit" class="px-4 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar Alterações</button>
         </div>
       </form>
     </div>
@@ -774,7 +776,7 @@
       
       const btn = document.getElementById('btn-sync-sheets');
       const originalHtml = btn.innerHTML;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A verificar...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> A sincronizar...`;
       btn.disabled = true;
 
       try {
@@ -794,6 +796,7 @@
           const codeTrim = String(m.code || '').trim().toLowerCase();
           const sec = sectors.find(s => s.id === m.sector_id);
           const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
+          const floorName = floor ? floor.name : 'Geral';
           const locationName = (floor ? floor.name + ' - ' : '') + (sec ? sec.name : 'Geral');
 
           if (existingCodesInSheet.includes(codeTrim)) {
@@ -805,6 +808,7 @@
             });
           } else {
             newItemsToSend.push({
+              floor: floorName,
               sector: locationName,
               ticket: m.ticket || '-', code: m.code || '-', model: m.model || '-',
               os: m.os || '-', status: m.status || '-',
@@ -824,7 +828,7 @@
         if (duplicateItemsFound.length > 0) {
           showDuplicatesReport(duplicateItemsFound);
         } else {
-          alert(`✅ Sincronização concluída!\nForam enviados ${newItemsToSend.length} novos registos. Nenhuma duplicata detetada.`);
+          alert(`✅ Sincronização concluída!\nAs abas correspondentes foram verificadas/criadas na planilha e ${newItemsToSend.length} novos registos foram enviados.`);
         }
 
       } catch (err) {
@@ -940,7 +944,7 @@
         if (usrRes.data) usersList = usrRes.data;
 
         if (floors.length === 0) {
-          floors = [{ id: 'floor_1', name: 'Andar 1' }, { id: 'floor_2', name: 'Andar 2' }, { id: 'floor_3', name: 'Andar 3' }];
+          floors = [{ id: 'floor_1', name: '1º Andar' }, { id: 'floor_2', name: '2º Andar' }, { id: 'floor_3', name: '3º Andar' }];
         }
         if (sectors.length === 0) {
           sectors = [{ id: 'sec_default', floor_id: floors[0].id, name: 'Informatica', color: '#2563eb' }];
@@ -1111,7 +1115,7 @@
 
     // GESTÃO DE ANDARES (ABAS ESTILO NAVEGADOR)
     function addNewFloorPrompt() {
-      const floorName = prompt("Digite o nome da nova aba/andar (ex: Andar 4, Subsolo, etc.):");
+      const floorName = prompt("Digite o nome da nova aba/andar (ex: 2º Andar, Subsolo, etc.):");
       if (!floorName || !floorName.trim()) return;
       const formatted = floorName.trim();
 
@@ -1180,17 +1184,15 @@
       sectorsContainer.innerHTML = '';
 
       if (!floors || floors.length === 0) {
-        floors = [{ id: 'floor_1', name: 'Andar 1' }, { id: 'floor_2', name: 'Andar 2' }, { id: 'floor_3', name: 'Andar 3' }];
+        floors = [{ id: 'floor_1', name: '1º Andar' }, { id: 'floor_2', name: '2º Andar' }, { id: 'floor_3', name: '3º Andar' }];
       }
 
-      // Ordena andares alfabeticamente A-Z
       const sortedFloors = [...floors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       if (!currentFloorId || !sortedFloors.some(f => f.id === currentFloorId)) {
         currentFloorId = sortedFloors[0].id;
       }
 
-      // Renderiza as abas dos andares estilo navegador
       sortedFloors.forEach(f => {
         const isCurrent = f.id === currentFloorId;
         const btn = document.createElement('button');
@@ -1201,7 +1203,6 @@
         floorsContainer.appendChild(btn);
       });
 
-      // Botão [+] estilo navegador para adicionar nova aba/andar
       const addTabBtn = document.createElement('button');
       addTabBtn.type = 'button';
       addTabBtn.onclick = () => addNewFloorPrompt();
@@ -1218,7 +1219,6 @@
         document.getElementById('btn-delete-floor').classList.remove('hidden');
       }
 
-      // Filtra e Ordena as pastas/setores do andar atual em ordem alfabética A-Z
       const floorSectors = sectors.filter(s => s.floor_id === currentFloorId);
       const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
@@ -1245,7 +1245,7 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="event.stopPropagation(); editFolder('${sec.id}')" class="p-2 text-slate-400 hover:text-slate-600 text-xs"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="event.stopPropagation(); editFolder('${sec.id}')" title="Editar ou Mover Pasta" class="p-2 text-slate-400 hover:text-slate-600 text-xs"><i class="fa-solid fa-pen"></i></button>
             <button onclick="event.stopPropagation(); deleteFolder('${sec.id}')" class="p-2 text-slate-400 hover:text-red-500 text-xs"><i class="fa-solid fa-trash-can"></i></button>
             <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
           </div>
@@ -1255,8 +1255,12 @@
     }
 
     function openFolderModal() {
-      const activeFloor = floors.find(f => f.id === currentFloorId);
-      document.getElementById('folder-floor-display').value = activeFloor ? activeFloor.name : 'Andar Atual';
+      const select = document.getElementById('folder-floor-id');
+      select.innerHTML = '';
+      floors.forEach(f => {
+        select.innerHTML += `<option value="${f.id}" ${f.id === currentFloorId ? 'selected' : ''}>${f.name}</option>`;
+      });
+
       document.getElementById('folder-id').value = '';
       document.getElementById('folder-name').value = '';
       document.getElementById('folder-color').value = '#2563eb';
@@ -1268,14 +1272,14 @@
     async function saveFolder(e) {
       e.preventDefault();
       const id = document.getElementById('folder-id').value;
-      const floor_id = currentFloorId;
+      const floor_id = document.getElementById('folder-floor-id').value;
       const name = document.getElementById('folder-name').value.trim();
       const color = document.getElementById('folder-color').value;
       if(!name) return;
 
       if(id) {
         const sec = sectors.find(s => s.id === id);
-        if(sec) { sec.name = name; sec.color = color; }
+        if(sec) { sec.name = name; sec.floor_id = floor_id; sec.color = color; }
         if (supabaseClient && navigator.onLine) await supabaseClient.from('sectors').upsert([{ id, floor_id, name, color }]);
       } else {
         const newId = 'sec_' + Date.now();
@@ -1286,6 +1290,7 @@
 
       localStorage.setItem('reg_sectors', JSON.stringify(sectors));
       closeFolderModal();
+      currentFloorId = floor_id;
       renderFloorsAndSectors();
     }
 
@@ -1293,12 +1298,16 @@
       const sec = sectors.find(s => s.id === id);
       if(!sec) return;
 
-      const floor = floors.find(f => f.id === sec.floor_id);
-      document.getElementById('folder-floor-display').value = floor ? floor.name : 'Andar Atual';
+      const select = document.getElementById('folder-floor-id');
+      select.innerHTML = '';
+      floors.forEach(f => {
+        select.innerHTML += `<option value="${f.id}" ${f.id === sec.floor_id ? 'selected' : ''}>${f.name}</option>`;
+      });
+
       document.getElementById('folder-id').value = sec.id;
       document.getElementById('folder-name').value = sec.name;
       document.getElementById('folder-color').value = sec.color || '#2563eb';
-      document.getElementById('modal-folder-title').innerText = 'Editar Setor';
+      document.getElementById('modal-folder-title').innerText = 'Editar / Mover Setor';
       document.getElementById('modal-folder').classList.remove('hidden');
     }
 
