@@ -575,7 +575,7 @@
       loadCustomModelsFromStorage();
       setupNetworkListeners();
       
-      // Carrega primeiro o que estiver em cache local para agilizar o arranque
+      // Carrega primeiro o cache local para arranque imediato
       try {
         floors = JSON.parse(localStorage.getItem('reg_floors') || '[]');
         sectors = JSON.parse(localStorage.getItem('reg_sectors') || '[]');
@@ -589,7 +589,7 @@
         usersList = [{ id: 'usr_admin', username: 'admin', password: 'admin', role: 'admin' }];
       }
 
-      // Sincroniza e puxa os dados do Supabase imediatamente ao abrir
+      // Puxa imediatamente os dados atualizados do Supabase para todos os utilizadores
       await loadDataFromServer();
       initRealtimeSubscription();
 
