@@ -164,6 +164,7 @@
         <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
         <button onclick="filterMachinesByStatus('Operacional')" id="filter-btn-Operacional" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Operacional</button>
         <button onclick="filterMachinesByStatus('Manutenção')" id="filter-btn-Manutenção" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Manutenção</button>
+        <button onclick="filterMachinesByStatus('Backup')" id="filter-btn-Backup" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Backup</button>
         <button onclick="filterMachinesByStatus('Defeito')" id="filter-btn-Defeito" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Defeito</button>
         <button onclick="filterMachinesByStatus('Novo')" id="filter-btn-Novo" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Novo</button>
       </div>
@@ -412,12 +413,17 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo / Tipo de Equipamento</label>
-          <input type="text" id="machine-model" list="model-options" placeholder="Selecione ou digite (Positivo, Dell, Lenovo...)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-semibold text-slate-600">Modelo / Tipo de Equipamento</label>
+            <button type="button" onclick="addNewModelOption()" class="text-[11px] text-blue-600 font-bold hover:underline">+ Novo Modelo</button>
+          </div>
+          <input type="text" id="machine-model" list="model-options" placeholder="Selecione ou digite..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           <datalist id="model-options">
             <option value="Positivo">
             <option value="Dell">
             <option value="Lenovo">
+            <option value="HP">
+            <option value="C3Tech">
           </datalist>
         </div>
 
@@ -429,6 +435,7 @@
             <option value="Win7">Windows 7</option>
             <option value="Win8">Windows 8</option>
             <option value="Linux">Linux</option>
+            <option value="Não se aplica">Não se aplica</option>
           </select>
         </div>
 
@@ -437,6 +444,7 @@
           <select id="machine-status" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
             <option value="Operacional">Operacional / Em uso</option>
             <option value="Manutenção">Em Manutenção</option>
+            <option value="Backup">Backup</option>
             <option value="Defeito">Com Defeito / Inativo</option>
             <option value="Novo">Novo / A instalar</option>
           </select>
@@ -446,25 +454,13 @@
         <div>
           <div class="flex justify-between items-center mb-1.5">
             <label class="block text-xs font-semibold text-slate-600"><i class="fa-solid fa-boxes-stacked text-blue-600 mr-1"></i> Periféricos do Conjunto</label>
-            <button type="button" onclick="toggleCompleteMachine()" class="text-[11px] text-blue-600 font-bold hover:underline">⚡ Máquina Completa</button>
+            <div class="flex gap-2">
+              <button type="button" onclick="addNewPeripheralPrompt()" class="text-[11px] text-emerald-600 font-bold hover:underline">+ Adicionar Item</button>
+              <button type="button" onclick="toggleCompleteMachine()" class="text-[11px] text-blue-600 font-bold hover:underline">⚡ Marcar Todos</button>
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs">
-            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
-              <input type="checkbox" name="peripherals" value="Gabinete" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-              <span class="font-medium text-slate-700">Gabinete</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
-              <input type="checkbox" name="peripherals" value="Monitor" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-              <span class="font-medium text-slate-700">Monitor</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
-              <input type="checkbox" name="peripherals" value="Teclado" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-              <span class="font-medium text-slate-700">Teclado</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded">
-              <input type="checkbox" name="peripherals" value="Mouse" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-              <span class="font-medium text-slate-700">Mouse</span>
-            </label>
+          <div id="peripherals-checkboxes-container" class="grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs">
+            <!-- Gerado Dinamicamente -->
           </div>
         </div>
 
@@ -512,6 +508,7 @@
     let machines = [];
     let usersList = [];
     let offlineQueue = [];
+    let customPeripheralsList = ['Gabinete', 'Monitor', 'Teclado', 'Mouse'];
     let sessionMonitorInterval = null;
 
     let currentSectorId = null;
@@ -522,6 +519,7 @@
 
     window.onload = async () => {
       loadOfflineQueueFromStorage();
+      loadCustomPeripheralsFromStorage();
       setupNetworkListeners();
       
       try {
@@ -562,6 +560,74 @@
 
       document.getElementById('view-login').classList.remove('hidden');
     };
+
+    function loadCustomPeripheralsFromStorage() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('reg_custom_peripherals') || '[]');
+        if (saved && saved.length > 0) {
+          customPeripheralsList = saved;
+        }
+      } catch(e) {}
+    }
+
+    function saveCustomPeripheralsToStorage() {
+      localStorage.setItem('reg_custom_peripherals', JSON.stringify(customPeripheralsList));
+    }
+
+    function renderPeripheralsCheckboxes(selectedValues = []) {
+      const container = document.getElementById('peripherals-checkboxes-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      customPeripheralsList.forEach(item => {
+        const isChecked = selectedValues.includes(item);
+        const label = document.createElement('label');
+        label.className = "flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded";
+        label.innerHTML = `
+          <input type="checkbox" name="peripherals" value="${item}" ${isChecked ? 'checked' : ''} class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+          <span class="font-medium text-slate-700 truncate">${item}</span>
+        `;
+        container.appendChild(label);
+      });
+    }
+
+    function addNewPeripheralPrompt() {
+      const newItem = prompt("Digite o nome do novo periférico para adicionar à lista fixa:");
+      if (!newItem || !newItem.trim()) return;
+      const formatted = newItem.trim();
+
+      if (!customPeripheralsList.includes(formatted)) {
+        customPeripheralsList.push(formatted);
+        saveCustomPeripheralsToStorage();
+        
+        // Mantém os já selecionados e renderiza novamente
+        const currentSelected = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
+        currentSelected.push(formatted);
+        renderPeripheralsCheckboxes(currentSelected);
+      } else {
+        alert("Este periférico já existe na lista.");
+      }
+    }
+
+    function addNewModelOption() {
+      const newModel = prompt("Digite o novo modelo/fabricante para adicionar à lista:");
+      if (!newModel || !newModel.trim()) return;
+      const formatted = newModel.trim();
+
+      const datalist = document.getElementById('model-options');
+      // Verifica se já existe
+      let exists = false;
+      for (let opt of datalist.options) {
+        if (opt.value.toLowerCase() === formatted.toLowerCase()) { exists = true; break; }
+      }
+
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = formatted;
+        datalist.appendChild(opt);
+      }
+      document.getElementById('machine-model').value = formatted;
+    }
 
     function setupNetworkListeners() {
       window.addEventListener('online', () => {
@@ -1159,7 +1225,7 @@
     }
 
     function highlightFilterButton(activeStatus) {
-      ['Todos', 'Operacional', 'Manutenção', 'Defeito', 'Novo'].forEach(st => {
+      ['Todos', 'Operacional', 'Manutenção', 'Backup', 'Defeito', 'Novo'].forEach(st => {
         const btn = document.getElementById(`filter-btn-${st}`);
         if(!btn) return;
         if(st === activeStatus) {
@@ -1262,8 +1328,9 @@
       document.getElementById('machine-code').value = '';
       document.getElementById('machine-model').value = '';
       document.getElementById('machine-os').value = 'Win10';
+      document.getElementById('machine-status').value = 'Operacional';
       document.getElementById('machine-notes').value = '';
-      document.querySelectorAll('input[name="peripherals"]').forEach(chk => chk.checked = false);
+      renderPeripheralsCheckboxes([]);
       document.getElementById('modal-machine-title').innerText = 'Cadastrar Máquina';
       removeCapturedPhoto();
       stopScanner();
@@ -1292,9 +1359,7 @@
       document.getElementById('machine-status').value = m.status || 'Operacional';
       document.getElementById('machine-notes').value = m.notes || '';
       
-      document.querySelectorAll('input[name="peripherals"]').forEach(chk => {
-        chk.checked = m.peripherals && m.peripherals.includes(chk.value);
-      });
+      renderPeripheralsCheckboxes(m.peripherals || []);
 
       document.getElementById('modal-machine-title').innerText = 'Editar Máquina';
 
@@ -1364,7 +1429,6 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
-    // FUNÇÃO DE IMPORTAÇÃO COM BLOQUEIO DE DUPLICADAS E RELATÓRIO DO QUE NÃO FOI IMPORTADO
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1390,10 +1454,8 @@
 
           for (const row of rows) {
             const sectorNameRaw = String(row['SETOR'] || row['Setor'] || row['setor'] || 'GERAL').trim().toUpperCase();
-            
             const code = String(row['PATRIMÔNIO'] || row['Patrimônio'] || row['Código'] || row['PATRIMONIO'] || row['codigo'] || '').trim();
             
-            // Registo inválido se não tiver código ou setor
             if (!code || !sectorNameRaw) {
               if (code || sectorNameRaw) {
                 skippedInvalid.push(code || 'Linha sem código');
@@ -1401,18 +1463,17 @@
               continue;
             }
 
-            // BLOQUEIO DE DUPLICADAS (Verifica se já existe na lista local ou global)
             const existingMachine = machines.find(m => m.code.toLowerCase() === code.toLowerCase());
             if (existingMachine) {
               skippedDuplicates.push(code);
-              continue; // Pula esta linha para não duplicar
+              continue;
             }
 
             let sec = sectors.find(s => s.name.toUpperCase() === sectorNameRaw);
             let sectorId = sec ? sec.id : null;
 
             if (!sec) {
-              sectorId = 'sec_' + Date.now + '_' + Math.random().toString(36).substr(2, 4);
+              sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
               const newSector = { id: sectorId, name: sectorNameRaw };
               sectors.push(newSector);
               importedSectorsCount++;
@@ -1428,7 +1489,7 @@
 
             const peripherals = [];
             if (monitor) peripherals.push('Monitor: ' + monitor);
-            if (row['CONJUNTO/ LENOVO']) peripherals.push('Conjunto');
+            if (row['CONJUNTO/ LENOVO']) peripherals.push('Gabinete');
 
             let prefix = sectorNameRaw.replace(/[^A-Z0-9]/g, '').slice(0, 4);
             if (!prefix) prefix = "SET";
@@ -1478,13 +1539,12 @@
 
           await logAuditAction("Importou Planilha", `Importados ${importedSectorsCount} setores e ${importedMachinesCount} máquinas. Ignoradas ${skippedDuplicates.length} duplicadas.`);
           
-          // RELATÓRIO DETALHADO DO QUE FOI IMPORTADO E DO QUE NÃO FOI
           let reportMsg = `📊 Relatório da Importação:\n\n`;
           reportMsg += `✅ Máquinas importadas com sucesso: ${importedMachinesCount}\n`;
           reportMsg += `📁 Novos setores criados: ${importedSectorsCount}\n`;
           
           if (skippedDuplicates.length > 0) {
-            reportMsg += `⚠️ Duplicadas ignoradas (já existiam): ${skippedDuplicates.length}\n   (Exs: ${skippedDuplicates.slice(0, 5).join(', ')}${skippedDuplicates.length > 5 ? '...' : ''})\n`;
+            reportMsg += `⚠️ Duplicadas ignoradas (já existiam): ${skippedDuplicates.length}\n`;
           }
           if (skippedInvalid.length > 0) {
             reportMsg += `❌ Ignoradas por dados incompletos: ${skippedInvalid.length}\n`;
