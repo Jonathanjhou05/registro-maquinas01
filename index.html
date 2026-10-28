@@ -1542,7 +1542,7 @@
             const code = String(row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '').trim();
             if (!code || !sectorNameRaw) continue;
 
-            if (machines.some(m => m.code.toLowerCase() === code.toLowerCase())) continue;
+            if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
 
             let sec = sectors.find(s => s.name.toUpperCase() === sectorNameRaw);
             let sectorId = sec ? sec.id : null;
@@ -1552,31 +1552,43 @@
               const defaultFloorId = currentFloorId || floors[0].id;
               const newSector = { id: sectorId, floor_id: defaultFloorId, name: sectorNameRaw, color: '#2563eb' };
               sectors.push(newSector);
-              if (supabaseClient && navigator.onLine) await supabaseClient.from('sectors').upsert([newSector]);
+              if (supabaseClient && navigator.onLine) {
+                await supabaseClient.from('sectors').upsert([newSector]);
+              }
             }
 
             const model = String(row['Modelo'] || 'POSITIVO').trim();
+            const os = String(row['SO'] || row['Sistema Operacional'] || 'Win10').trim();
+            const status = String(row['Estado'] || 'Operacional').trim();
+            const notes = String(row['Observações'] || row['Notas'] || '').trim();
             const now = new Date();
             const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             
             const newMachine = {
               id: 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-              sector_id: sectorId, ticket: 'SET-001', code, model, status: 'Operacional',
-              peripherals: ['Gabinete'], notes: '', date: dateStr, timestamp: Date.now()
+              sector_id: sectorId, ticket: 'SET-001', code, model, os, status,
+              peripherals: ['Gabinete', 'Monitor'], notes, date: dateStr, timestamp: Date.now()
             };
 
             machines.push(newMachine);
             count++;
+
             if (supabaseClient && navigator.onLine) {
               await supabaseClient.from('machines').insert([newMachine]);
             }
           }
+
           localStorage.setItem('reg_sectors', JSON.stringify(sectors));
           localStorage.setItem('reg_machines', JSON.stringify(machines));
-          alert(`Importadas ${count} máquinas com sucesso!`);
+
+          alert(`Importação concluída!\nForam salvas ${count} novas máquinas nas respetivas pastas.`);
           renderFloorsAndSectors();
-        } catch (err) { alert("Erro ao importar."); }
-        finally { e.target.value = ''; }
+          if (currentSectorId) renderMachines();
+        } catch (err) {
+          alert("Erro ao processar e salvar o ficheiro.");
+        } finally {
+          e.target.value = '';
+        }
       };
       reader.readAsArrayBuffer(file);
     }
