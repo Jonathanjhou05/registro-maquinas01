@@ -1146,7 +1146,7 @@
       const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       if (sortedSectors.length === 0) {
-        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
+        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
         return;
       }
 
@@ -1239,13 +1239,16 @@
     }
 
     async function deleteFolder(id) {
-      if(confirm("Excluir este setor e as suas máquinas?")) {
+      if(confirm("Excluir este setor e todas as máquinas associadas a ele?")) {
         const { error } = await supabaseClient.from('sectors').delete().eq('id', id);
         if (error) { alert("Erro ao excluir setor: " + error.message); return; }
 
+        // Remove o setor e limpa imediatamente as máquinas locais associadas a ele
         sectors = sectors.filter(s => s.id !== id);
         machines = machines.filter(m => m.sector_id !== id);
+        
         renderFloorsAndSectors();
+        updateDashboardStats();
       }
     }
 
