@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Registo de Máquinas - Nuvem & Offline</title>
+  <title>InfraGest - Gestão de Infraestrutura & Inventário</title>
 
   <!-- PWA Metadata -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2563eb">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RegMáquinas">
+  <meta name="apple-mobile-web-app-title" content="InfraGest">
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2942/2942544.png">
 
   <!-- Tailwind CSS -->
@@ -47,7 +47,7 @@
         <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
           <i class="fa-solid fa-desktop"></i>
         </div>
-        <h2 class="font-bold text-slate-800 text-lg">Registo de Máquinas</h2>
+        <h2 class="font-bold text-slate-800 text-lg">InfraGest</h2>
         <p class="text-xs text-slate-500">Entre com as suas credenciais para aceder ao sistema</p>
       </div>
 
@@ -89,7 +89,7 @@
       <button id="btn-back" onclick="goBack()" class="hidden text-white hover:text-blue-100 text-lg">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
-      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">Andares & Setores</h1>
+      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">InfraGest - Andares & Setores</h1>
     </div>
     <div class="flex items-center gap-2">
       <button onclick="forceSyncWithGoogleSheets()" title="Atualizar Folha Online" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
@@ -759,20 +759,20 @@
           const codeTrim = String(m.code || '').trim().toLowerCase();
           const sec = sectors.find(s => s.id === m.sector_id);
           const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
-          const floorName = floor ? floor.name : 'Geral';
-          const locationName = (floor ? floor.name + ' - ' : '') + (sec ? sec.name : 'Geral');
+          const floorName = floor ? floor.name.toUpperCase() : 'GERAL';
+          const sectorName = sec ? sec.name.toUpperCase() : 'GERAL';
 
           if (existingCodesInSheet.includes(codeTrim)) {
             duplicateItemsFound.push({
               code: m.code,
               model: m.model || 'Não especificado',
-              sector: locationName,
+              sector: sectorName,
               reason: 'Já existe na planilha'
             });
           } else {
             newItemsToSend.push({
               floor: floorName,
-              sector: locationName,
+              sector: sectorName,
               ticket: m.ticket || '-', 
               code: m.code || '-', 
               monitor: m.monitor || '-', 
@@ -817,7 +817,7 @@
           <div class="bg-white p-2.5 rounded-lg border border-amber-200 text-xs flex justify-between items-center">
             <div>
               <span class="font-bold text-slate-800">${idx + 1}. Gabinete: <strong class="text-blue-700">${item.code}</strong></span>
-              <p class="text-[11px] text-slate-500">Modelo: ${item.model} | Local: ${item.sector}</p>
+              <p class="text-[11px] text-slate-500">Modelo: ${item.model} | Setor: ${item.sector}</p>
             </div>
             <span class="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-1 rounded">⚠️ Duplicado</span>
           </div>
@@ -989,18 +989,18 @@
       if(tab === 'sectors') {
         document.getElementById('view-sectors').classList.remove('hidden');
         document.getElementById('nav-sectors').className = "flex flex-col items-center gap-1 text-blue-600";
-        document.getElementById('app-title').innerText = "Andares & Setores";
+        document.getElementById('app-title').innerText = "InfraGest - Andares & Setores";
         currentSectorId = null;
         renderFloorsAndSectors();
       } else if(tab === 'admin') {
         document.getElementById('view-admin').classList.remove('hidden');
         document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-blue-600";
-        document.getElementById('app-title').innerText = "Painel Master (ADM)";
+        document.getElementById('app-title').innerText = "InfraGest - Painel Master (ADM)";
         checkAdminAccess();
       } else if(tab === 'settings') {
         document.getElementById('view-settings').classList.remove('hidden');
         document.getElementById('nav-settings').className = "flex flex-col items-center gap-1 text-blue-600";
-        document.getElementById('app-title').innerText = "Configurações";
+        document.getElementById('app-title').innerText = "InfraGest - Configurações";
       }
     }
 
@@ -1636,12 +1636,12 @@
       filtered.forEach(m => {
         const sec = sectors.find(s => s.id === m.sector_id);
         const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
-        fileContent += `${floor ? floor.name : 'Geral'}\t${sec ? sec.name : 'Geral'}\t${m.ticket}\t${m.code || ''}\t${m.monitor || ''}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
+        fileContent += `${floor ? floor.name.toUpperCase() : 'GERAL'}\t${sec ? sec.name.toUpperCase() : 'GERAL'}\t${m.ticket}\t${m.code || ''}\t${m.monitor || ''}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
       });
       const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `Relatorio_${new Date().toISOString().slice(0, 10)}.xls`;
+      link.download = `InfraGest_Relatorio_${new Date().toISOString().slice(0, 10)}.xls`;
       link.click();
       closeExportModal();
     }
