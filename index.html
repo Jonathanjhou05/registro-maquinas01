@@ -134,7 +134,7 @@
       <!-- BARRA DE PESQUISA GLOBAL -->
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar andar, pasta, património, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar andar, pasta, gabinete, monitor, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
       </div>
 
       <!-- ABAS DOS ANDARES ESTILO NAVEGADOR COM BOTÃO + -->
@@ -276,7 +276,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD/EDIT SECTOR (PASTA COM OPÇÃO DE MOVER ANDAR) -->
+  <!-- MODAL: ADD/EDIT SECTOR -->
   <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -310,7 +310,7 @@
     </div>
   </div>
 
-  <!-- MODAL: EXPORTAÇÃO CSV -->
+  <!-- MODAL: EXPORTAÇÃO EXCEL -->
   <div id="modal-export" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50">
@@ -359,8 +359,12 @@
             <span id="detail-sector" class="font-bold text-slate-800">-</span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Património / Código:</span>
+            <span class="text-slate-500 font-semibold">Etiqueta Gabinete:</span>
             <span id="detail-code" class="font-mono font-bold text-blue-700 text-sm"></span>
+          </div>
+          <div class="flex justify-between border-b pb-1.5">
+            <span class="text-slate-500 font-semibold">Etiqueta Monitor:</span>
+            <span id="detail-monitor" class="font-mono font-bold text-emerald-700 text-sm"></span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
             <span class="text-slate-500 font-semibold">Modelo / Tipo:</span>
@@ -441,16 +445,29 @@
       <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
         <input type="hidden" id="edit-machine-id">
 
+        <!-- ETIQUETA / GABINETE / PATRIMÓNIO -->
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Património</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Gabinete / Património</label>
           <div class="flex gap-2">
-            <input type="text" id="machine-code" required placeholder="Digite ou escaneie o código" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
-            <button type="button" onclick="startScanner()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
+            <input type="text" id="machine-code" required placeholder="Digite ou escaneie o gabinete" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
+            <button type="button" onclick="startScanner('code')" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
               <i class="fa-solid fa-barcode text-sm"></i> Ler
             </button>
           </div>
         </div>
 
+        <!-- ETIQUETA / MONITOR / PATRIMÓNIO -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Monitor / Património</label>
+          <div class="flex gap-2">
+            <input type="text" id="machine-monitor" placeholder="Digite ou escaneie o monitor" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-emerald-800">
+            <button type="button" onclick="startScanner('monitor')" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
+              <i class="fa-solid fa-barcode text-sm"></i> Ler
+            </button>
+          </div>
+        </div>
+
+        <!-- SCANNER CONTAINER -->
         <div id="scanner-container" class="hidden border-2 border-dashed border-blue-400 p-2 rounded-xl bg-slate-50 relative">
           <div id="reader" class="w-full"></div>
           <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-red-100 text-red-600 text-xs font-bold py-1.5 rounded-lg">Fechar Leitor</button>
@@ -565,6 +582,7 @@
     let currentFilterStatus = 'Todos';
     let currentBase64Photo = null;
     let html5QrcodeScanner = null;
+    let activeScannerTarget = 'code';
     let currentUser = null;
 
     window.onload = async () => {
@@ -755,10 +773,15 @@
             newItemsToSend.push({
               floor: floorName,
               sector: locationName,
-              ticket: m.ticket || '-', code: m.code || '-', model: m.model || '-',
-              os: m.os || '-', status: m.status || '-',
+              ticket: m.ticket || '-', 
+              code: m.code || '-', 
+              monitor: m.monitor || '-', 
+              model: m.model || '-',
+              os: m.os || '-', 
+              status: m.status || '-',
               peripherals: Array.isArray(m.peripherals) ? m.peripherals.join(', ') : (m.peripherals || '-'),
-              notes: m.notes || '-', date: m.date || '-'
+              notes: m.notes || '-', 
+              date: m.date || '-'
             });
           }
         });
@@ -793,7 +816,7 @@
         container.innerHTML += `
           <div class="bg-white p-2.5 rounded-lg border border-amber-200 text-xs flex justify-between items-center">
             <div>
-              <span class="font-bold text-slate-800">${idx + 1}. Património: <strong class="text-blue-700">${item.code}</strong></span>
+              <span class="font-bold text-slate-800">${idx + 1}. Gabinete: <strong class="text-blue-700">${item.code}</strong></span>
               <p class="text-[11px] text-slate-500">Modelo: ${item.model} | Local: ${item.sector}</p>
             </div>
             <span class="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-1 rounded">⚠️ Duplicado</span>
@@ -841,7 +864,6 @@
       document.getElementById('current-role-display').innerText = currentUser.role.toUpperCase();
     }
 
-    // CARREGAMENTO DIRETO E LIMPO DO SUPABASE
     async function loadDataFromServer() {
       if (!supabaseClient) {
         alert("Erro: Cliente Supabase não encontrado.");
@@ -865,7 +887,6 @@
         machines = macRes.data || [];
         usersList = usrRes.data || [];
 
-        // Se a base de dados estiver limpa/vazia, gera os registos padrão
         if (floors.length === 0) {
           floors = [{ id: 'floor_1', name: '1º Andar' }, { id: 'floor_2', name: '2º Andar' }, { id: 'floor_3', name: '3º Andar' }];
           await supabaseClient.from('floors').insert(floors);
@@ -909,6 +930,7 @@
       const matchedMachines = machines.filter(m => 
         matchedSectorIds.includes(m.sector_id) ||
         (m.code && m.code.toLowerCase().includes(q)) || 
+        (m.monitor && m.monitor.toLowerCase().includes(q)) || 
         (m.model && m.model.toLowerCase().includes(q)) || 
         (m.ticket && m.ticket.toLowerCase().includes(q)) ||
         (m.notes && m.notes.toLowerCase().includes(q)) ||
@@ -940,12 +962,11 @@
             ${photoHtml}
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
-                <span class="font-mono font-bold text-blue-700 text-sm">${m.code}</span>
+                <span class="font-mono font-bold text-blue-700 text-sm">Gab: ${m.code}</span>
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
               </div>
+              ${m.monitor ? `<p class="text-[11px] font-mono text-emerald-700 font-semibold">Mon: ${m.monitor}</p>` : ''}
               <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-blue-600 font-semibold">(${locationStr})</span></p>
-              ${m.os ? `<p class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-laptop mr-1"></i> SO: ${m.os}</p>` : ''}
-              ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
               <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
             </div>
           </div>
@@ -1045,7 +1066,6 @@
       }
     }
 
-    // GESTÃO DE ANDARES (ABAS ESTILO NAVEGADOR)
     async function addNewFloorPrompt() {
       const floorName = prompt("Digite o nome da nova aba/andar (ex: 2º Andar, Subsolo, etc.):");
       if (!floorName || !floorName.trim()) return;
@@ -1098,7 +1118,6 @@
       }
     }
 
-    // GESTÃO DE SETORES / PASTAS
     function renderFloorsAndSectors() {
       updateDashboardStats();
       const floorsContainer = document.getElementById('floors-tabs-container');
@@ -1243,7 +1262,6 @@
         const { error } = await supabaseClient.from('sectors').delete().eq('id', id);
         if (error) { alert("Erro ao excluir setor: " + error.message); return; }
 
-        // Remove o setor e limpa imediatamente as máquinas locais associadas a ele
         sectors = sectors.filter(s => s.id !== id);
         machines = machines.filter(m => m.sector_id !== id);
         
@@ -1316,9 +1334,10 @@
             ${photoHtml}
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
-                <span class="font-mono font-bold text-blue-700 text-sm">${m.code}</span>
+                <span class="font-mono font-bold text-blue-700 text-sm">Gab: ${m.code}</span>
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
               </div>
+              ${m.monitor ? `<p class="text-[11px] font-mono text-emerald-700 font-semibold">Mon: ${m.monitor}</p>` : ''}
               <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'}</p>
               ${m.os ? `<p class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-laptop mr-1"></i> SO: ${m.os}</p>` : ''}
               ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
@@ -1347,7 +1366,8 @@
 
       document.getElementById('detail-ticket').innerText = m.ticket || '-';
       document.getElementById('detail-sector').innerText = locationStr;
-      document.getElementById('detail-code').innerText = m.code;
+      document.getElementById('detail-code').innerText = m.code || '-';
+      document.getElementById('detail-monitor').innerText = m.monitor || 'Não cadastrado';
       document.getElementById('detail-model').innerText = m.model || '-';
       document.getElementById('detail-os').innerText = m.os || '-';
       document.getElementById('detail-status').innerText = m.status;
@@ -1369,6 +1389,7 @@
     function openMachineModal() {
       document.getElementById('edit-machine-id').value = '';
       document.getElementById('machine-code').value = '';
+      document.getElementById('machine-monitor').value = '';
       document.getElementById('machine-model').value = '';
       document.getElementById('machine-os').value = 'Win10';
       document.getElementById('machine-status').value = 'Operacional';
@@ -1391,7 +1412,8 @@
       const m = machines.find(item => item.id === id);
       if (!m) return;
       document.getElementById('edit-machine-id').value = m.id;
-      document.getElementById('machine-code').value = m.code;
+      document.getElementById('machine-code').value = m.code || '';
+      document.getElementById('machine-monitor').value = m.monitor || '';
       document.getElementById('machine-model').value = m.model || '';
       document.getElementById('machine-os').value = m.os || 'Win10';
       document.getElementById('machine-status').value = m.status || 'Operacional';
@@ -1437,13 +1459,18 @@
       document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
     }
 
-    function startScanner() {
+    function startScanner(target) {
+      activeScannerTarget = target; // 'code' (gabinete) ou 'monitor'
       document.getElementById('scanner-container').classList.remove('hidden');
       if(html5QrcodeScanner) stopScanner();
       try {
         html5QrcodeScanner = new Html5Qrcode("reader");
         html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 220 }, (text) => {
-          document.getElementById('machine-code').value = text;
+          if (activeScannerTarget === 'monitor') {
+            document.getElementById('machine-monitor').value = text;
+          } else {
+            document.getElementById('machine-code').value = text;
+          }
           stopScanner();
         }, () => {}).catch(() => stopScanner());
       } catch(e) { stopScanner(); }
@@ -1469,7 +1496,8 @@
           let count = 0;
           for (const row of rows) {
             const sectorNameRaw = String(row['SETOR'] || row['Setor'] || 'GERAL').trim().toUpperCase();
-            const code = String(row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '').trim();
+            const code = String(row['GABINETE'] || row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '').trim();
+            const monitor = String(row['MONITOR'] || row['Monitor'] || '').trim();
             if (!code || !sectorNameRaw) continue;
 
             if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
@@ -1496,7 +1524,7 @@
             
             const newMachine = {
               id: 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-              sector_id: sectorId, ticket: 'SET-001', code, model, os, status,
+              sector_id: sectorId, ticket: 'SET-001', code, monitor, model, os, status,
               peripherals: ['Gabinete', 'Monitor'], notes, date: dateStr, timestamp: Date.now()
             };
 
@@ -1523,6 +1551,7 @@
       e.preventDefault();
       const editId = document.getElementById('edit-machine-id').value;
       const code = document.getElementById('machine-code').value.trim();
+      const monitor = document.getElementById('machine-monitor').value.trim();
       const model = document.getElementById('machine-model').value.trim();
       const os = document.getElementById('machine-os').value;
       const status = document.getElementById('machine-status').value;
@@ -1536,12 +1565,12 @@
       const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
       if (editId) {
-        const { error } = await supabaseClient.from('machines').update({ code, model, os, status, peripherals, notes, photo_url: currentBase64Photo }).eq('id', editId);
+        const { error } = await supabaseClient.from('machines').update({ code, monitor, model, os, status, peripherals, notes, photo_url: currentBase64Photo }).eq('id', editId);
         if (error) { alert("Erro ao atualizar máquina: " + error.message); return; }
 
         const m = machines.find(item => item.id === editId);
         if(m) {
-          m.code = code; m.model = model; m.os = os; m.status = status;
+          m.code = code; m.monitor = monitor; m.model = model; m.os = os; m.status = status;
           m.peripherals = peripherals; m.notes = notes;
           if(currentBase64Photo) m.photo_url = currentBase64Photo;
         }
@@ -1551,7 +1580,7 @@
         const ticket = `${prefix}-${String(sectorMachinesCount + 1).padStart(3, '0')}`;
 
         const newMachine = {
-          id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, model, os, status, peripherals, notes,
+          id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
           photo_url: currentBase64Photo, date: dateStr, timestamp: Date.now()
         };
 
@@ -1603,11 +1632,11 @@
       if (selectedSectorIds.length === 0) { alert("Selecione pelo menos um setor."); return; }
       const filtered = machines.filter(m => selectedSectorIds.includes(m.sector_id));
       
-      let fileContent = "\uFEFFAndar\tSetor\tNº Ticket\tPatrimónio\tModelo\tSO\tEstado\tPeriféricos\tObservações\tData\n";
+      let fileContent = "\uFEFFAndar\tSetor\tNº Ticket\tEtiqueta Gabinete\tEtiqueta Monitor\tModelo\tSO\tEstado\tPeriféricos\tObservações\tData\n";
       filtered.forEach(m => {
         const sec = sectors.find(s => s.id === m.sector_id);
         const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
-        fileContent += `${floor ? floor.name : 'Geral'}\t${sec ? sec.name : 'Geral'}\t${m.ticket}\t${m.code}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
+        fileContent += `${floor ? floor.name : 'Geral'}\t${sec ? sec.name : 'Geral'}\t${m.ticket}\t${m.code || ''}\t${m.monitor || ''}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
       });
       const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
       const link = document.createElement("a");
