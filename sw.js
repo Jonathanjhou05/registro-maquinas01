@@ -1,14 +1,13 @@
-const CACHE_NAME = 'reg-maquinas-v1';
+const CACHE_NAME = 'infragest-pwa-v1';
 const ASSETS_TO_CACHE = [
+  './',
   './index.html',
   './manifest.json',
   'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-  'https://unpkg.com/html5-qrcode',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+  'https://unpkg.com/lucide@latest'
 ];
 
-// Instalação do Service Worker e cache dos recursos
+// Instalação: Salva assets em cache
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -18,7 +17,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Ativação e limpeza de caches antigos
+// Ativação: Limpa caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -34,16 +33,25 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interceção de requisições para funcionamento offline
+// Interceção de pedidos HTTP (Estratégia: Cache First com Network Fallback)
 self.addEventListener('fetch', (event) => {
+  // Ignora requisições POST para o Google Webhook (são tratadas pela fila local)
+  if (event.request.method === 'POST') return;
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request).catch(() => {
-        // Se falhar e for navegação, retorna o index.html em cache
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((networkResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
       });
+    }).catch(() => {
+      // Fallback para index.html se falhar a rede
+      return caches.match('./index.html');
     })
   );
 });
