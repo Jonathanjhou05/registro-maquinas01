@@ -1,11 +1,14 @@
-const CACHE_NAME = 'infragest-cache-v1';
+const CACHE_NAME = 'reg-maquinas-v1';
 const ASSETS_TO_CACHE = [
-  './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+  'https://unpkg.com/html5-qrcode',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
-// Instalação do Service Worker e salvamento em cache
+// Instalação do Service Worker e cache dos recursos
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -31,23 +34,16 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interceção de pedidos de rede
+// Interceção de requisições para funcionamento offline
 self.addEventListener('fetch', (event) => {
-  if (event.request.method === 'POST') return; // Ignora POSTs para o webhook do Sheets
-
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
+      return cachedResponse || fetch(event.request).catch(() => {
+        // Se falhar e for navegação, retorna o index.html em cache
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
       });
-    }).catch(() => {
-      return caches.match('./index.html');
     })
   );
 });
