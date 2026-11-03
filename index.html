@@ -1663,6 +1663,38 @@
         container.innerHTML += `<div class="bg-slate-50 p-2.5 rounded-lg border text-xs"><span class="font-bold text-blue-700">${log.user_action}</span><p>${log.details}</p></div>`;
       });
     }
+    // Função para mover a máquina para outro setor / pasta
+function openMoveMachineModal(machineId) {
+  // Pede ao utilizador o nome da nova pasta / setor
+  const novoSetor = prompt("Digite o nome da nova Pasta / Setor de destino:");
+  
+  if (!novoSetor || !novoSetor.trim()) return;
+
+  const setorFormatado = novoSetor.trim().toUpperCase();
+
+  // Procurar a máquina nos dados guardados
+  let maquinas = JSON.parse(localStorage.getItem('infragest_maquinas') || '[]');
+  let index = maquinas.findIndex(m => m.id == machineId || m.code === machineId);
+
+  if (index !== -1) {
+    // Atualiza o setor da máquina
+    maquinas[index].sector = setorFormatado;
+    localStorage.setItem('infragest_maquinas', JSON.stringify(maquinas));
+    
+    alert(`Equipamento movido com sucesso para a pasta: ${setorFormatado}`);
+    
+    // Recarrega a vista/lista de máquinas para refletir a mudança
+    if (typeof loadSectorItems === 'function') {
+      loadSectorItems();
+    } else if (typeof renderMachines === 'function') {
+      renderMachines();
+    } else {
+      location.reload();
+    }
+  } else {
+    alert("Equipamento não encontrado.");
+  }
+}
   </script>
 </body>
 </html>
