@@ -1,310 +1,49 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>InfraGest - Gestão de Infraestrutura & Inventário</title>
+const CACHE_NAME = 'reg-maquinas-v1';
+const ASSETS_TO_CACHE = [
+  './index.html',
+  './manifest.json',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+  'https://unpkg.com/html5-qrcode',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+];
 
-  <!-- PWA Metadata & Custom Icons -->
-  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="shortcut icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-  <meta name="apple-mobile-web-app-title" content="InfraGest" />
-  <link rel="manifest" href="/site.webmanifest" />
-  <meta name="theme-color" content="#2563eb">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+// Instalação do Service Worker e cache dos recursos
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
+  self.skipWaiting();
+});
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- HTML5 QR Code Scanner -->
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <!-- Supabase JS Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- SheetJS (XLSX Parser) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+// Ativação e limpeza de caches antigos
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
 
-  <style>
-    body { -webkit-tap-highlight-color: transparent; }
-    @media print {
-      body * { visibility: hidden; }
-      #printable-ticket, #printable-ticket *, #printable-duplicates, #printable-duplicates * { visibility: visible; }
-      #printable-ticket, #printable-duplicates { position: absolute; left: 0; top: 0; width: 100%; }
-    }
-  </style>
-</head>
-<body class="bg-slate-100 text-slate-800 flex flex-col h-screen overflow-hidden font-sans">
-
-  <!-- INDICADOR DE ESTADO DE CONEXÃO -->
-  <div id="offline-banner" class="hidden bg-amber-500 text-white text-[11px] font-semibold text-center py-1 px-2 flex items-center justify-center gap-1.5 flex-none z-30 shadow-inner">
-    <i class="fa-solid fa-triangle-exclamation"></i> Encontra-se offline. As alterações serão salvas localmente e sincronizadas quando a ligação for restabelecida.
-  </div>
-
-  <!-- LOGIN VIEW -->
-  <div id="view-login" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden p-6 space-y-6">
-      <div class="text-center space-y-2">
-        <div class="w-20 h-20 bg-blue-50 rounded-2xl mx-auto flex items-center justify-center shadow-inner overflow-hidden border border-blue-100 p-2">
-          <img src="favicon-96x96.png" alt="InfraGest Logo" class="w-full h-full object-contain">
-        </div>
-        <h2 class="font-bold text-slate-800 text-lg">InfraGest</h2>
-        <p class="text-xs text-slate-500">Entre com as suas credenciais para aceder ao sistema</p>
-      </div>
-
-      <form onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Utilizador</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-user"></i></span>
-            <input type="text" id="login-username" required placeholder="Ex: admin" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
-            <input type="password" id="login-password" required placeholder="A sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-        </div>
-
-        <div id="login-error" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2 rounded-lg border border-red-100">
-          Utilizador ou senha incorretos.
-        </div>
-
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl shadow-md transition">
-          Entrar no Sistema
-        </button>
-      </form>
-
-      <div class="text-center text-[10px] text-slate-400">
-        Predefinido: admin / admin
-      </div>
-    </div>
-  </div>
-
-  <!-- HEADER -->
-  <header class="bg-blue-600 text-white shadow-md flex-none px-4 py-3 flex items-center justify-between z-10">
-    <div class="flex items-center gap-3">
-      <button id="btn-back" onclick="goBack()" class="hidden text-white hover:text-blue-100 text-lg">
-        <i class="fa-solid fa-arrow-left"></i>
-      </button>
-      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">InfraGest - Andares & Setores</h1>
-    </div>
-    <div class="flex items-center gap-2">
-      <button onclick="forceSyncWithGoogleSheets()" title="Atualizar Folha Online" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
-        <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Sync Sheets</span>
-      </button>
-      <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer">
-        <i class="fa-solid fa-file-arrow-up"></i> <span class="hidden sm:inline">Importar</span>
-        <input type="file" id="import-excel-file" accept=".xlsx, .xls, .csv" onchange="handleExcelImport(event)" class="hidden">
-      </label>
-      <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Baixar</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- CONTENT CONTAINER -->
-  <main class="flex-1 overflow-y-auto relative p-4 pb-24" id="main-container">
-    
-    <!-- VIEW 1: FLOORS & SECTORS LIST -->
-    <section id="view-sectors" class="space-y-4">
-      
-      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS -->
-      <div class="grid grid-cols-4 gap-2 text-center">
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
-          <span id="stat-total" class="font-bold text-blue-700 text-sm">0</span>
-        </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativas</span>
-          <span id="stat-operacional" class="font-bold text-emerald-600 text-sm">0</span>
-        </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-amber-500 font-semibold uppercase">Manut.</span>
-          <span id="stat-manutencao" class="font-bold text-amber-600 text-sm">0</span>
-        </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-          <span class="block text-[10px] text-red-500 font-semibold uppercase">Defeito</span>
-          <span id="stat-defeito" class="font-bold text-red-600 text-sm">0</span>
-        </div>
-      </div>
-
-      <!-- BARRA DE PESQUISA GLOBAL -->
-      <div class="relative">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar andar, pasta, gabinete, monitor, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
-      </div>
-
-      <!-- ABAS DOS ANDARES ESTILO NAVEGADOR COM BOTÃO + -->
-      <div class="space-y-2">
-        <div class="flex justify-between items-center">
-          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Andares (Abas)</span>
-          <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
-            <i class="fa-solid fa-folder-plus"></i> Novo Setor
-          </button>
-        </div>
-        
-        <!-- Lista de Abas de Andares + Botão + -->
-        <div id="floors-tabs-container" class="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs"></div>
-      </div>
-
-      <!-- CABEÇALHO DO ANDAR ATUAL E SUAS PASTAS -->
-      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <h3 id="current-floor-title" class="font-bold text-sm text-indigo-900">Andar</h3>
-          <p id="current-floor-subtitle" class="text-[11px] text-slate-500">Selecione um andar acima</p>
-        </div>
-        <div class="flex items-center gap-1">
-          <button onclick="editCurrentFloor()" id="btn-edit-floor" class="hidden text-xs text-slate-500 hover:text-indigo-600 px-2 py-1"><i class="fa-solid fa-pen"></i> Renomear</button>
-          <button onclick="deleteCurrentFloor()" id="btn-delete-floor" class="hidden text-xs text-slate-400 hover:text-red-600 px-2 py-1" title="Excluir Andar"><i class="fa-solid fa-trash-can"></i></button>
-        </div>
-      </div>
-
-      <!-- LISTA DE PASTAS DO ANDAR SELECIONADO (EM ORDEM ALFABÉTICA) -->
-      <div id="sectors-list" class="grid grid-cols-1 gap-3"></div>
-    </section>
-
-    <!-- VIEW 2: ITEMS IN SECTOR -->
-    <section id="view-items" class="hidden space-y-4">
-      <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-        <div>
-          <h2 id="current-sector-title" class="font-bold text-base text-slate-800">Setor</h2>
-          <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registadas</p>
-        </div>
-        <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
-          <i class="fa-solid fa-plus"></i> Cadastrar
-        </button>
-      </div>
-
-      <!-- FILTROS RÁPIDOS POR ESTADO -->
-      <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
-        <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
-        <button onclick="filterMachinesByStatus('Operacional')" id="filter-btn-Operacional" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Operacional</button>
-        <button onclick="filterMachinesByStatus('Manutenção')" id="filter-btn-Manutenção" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Manutenção</button>
-        <button onclick="filterMachinesByStatus('Backup')" id="filter-btn-Backup" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Backup</button>
-        <button onclick="filterMachinesByStatus('Defeito')" id="filter-btn-Defeito" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Defeito</button>
-        <button onclick="filterMachinesByStatus('Novo')" id="filter-btn-Novo" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Novo</button>
-      </div>
-
-      <div id="items-list" class="space-y-3"></div>
-    </section>
-
-    <!-- VIEW 3: ADMIN / AUDIT LOGS & USER MANAGEMENT -->
-    <section id="view-admin" class="hidden space-y-4">
-      <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center hidden">
-        <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
-        <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Administrador</h3>
-        <p class="text-xs text-slate-500 mt-1">Apenas contas com perfil ADMIN podem gerir utilizadores e auditorias.</p>
-      </div>
-
-      <div id="admin-panel" class="space-y-4">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-          <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-users-gear mr-1 text-blue-600"></i> Gerir Utilizadores</h3>
-            <button onclick="openUserModal()" class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">+ Novo Utilizador</button>
-          </div>
-          <div id="users-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-          <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria</h3>
-            <button onclick="loadAuditLogs()" class="text-xs text-blue-600 font-semibold"><i class="fa-solid fa-rotate"></i> Atualizar</button>
-          </div>
-          <div id="audit-logs-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 4: SETTINGS -->
-    <section id="view-settings" class="hidden space-y-4">
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-        <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2">
-          <i class="fa-solid fa-user-shield text-blue-600"></i> Sessão Atual
-        </h3>
-        <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700">-</strong></p>
-        <p class="text-xs text-slate-600">Perfil: <strong id="current-role-display" class="uppercase text-slate-700">-</strong></p>
-        <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs py-2.5 px-3 rounded-lg border border-red-200 mt-2">
-          <i class="fa-solid fa-right-from-bracket mr-1"></i> Terminar Sessão (Logout)
-        </button>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- BOTTOM NAVIGATION BAR -->
-  <nav class="bg-white border-t border-slate-200 flex-none fixed bottom-0 left-0 right-0 z-20 flex justify-around py-2 px-4 shadow-lg">
-    <button onclick="switchTab('sectors')" id="nav-sectors" class="flex flex-col items-center gap-1 text-blue-600">
-      <i class="fa-solid fa-folder-open text-lg"></i>
-      <span class="text-[10px] font-medium">Inventário</span>
-    </button>
-    <button onclick="switchTab('admin')" id="nav-admin" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
-      <i class="fa-solid fa-shield-halved text-lg"></i>
-      <span class="text-[10px] font-medium">Avaliar (ADM)</span>
-    </button>
-    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600">
-      <i class="fa-solid fa-gear text-lg"></i>
-      <span class="text-[10px] font-medium">Ajustes</span>
-    </button>
-  </nav>
-
-  <!-- MODAL: RELATÓRIO DE DUPLICATAS -->
-  <div id="modal-duplicates-report" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
-      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-amber-50 flex-none">
-        <h3 class="font-bold text-amber-800 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Relatório de Duplicatas Detetadas</h3>
-        <button onclick="closeDuplicatesModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div id="printable-duplicates" class="p-5 space-y-3 overflow-y-auto flex-1 text-xs bg-white">
-        <div class="text-center pb-2 border-b">
-          <h4 class="font-bold text-sm text-slate-800">Relatório de Conflitos / Duplicatas na Sincronização</h4>
-          <p id="dup-report-date" class="text-[11px] text-slate-500 mt-0.5"></p>
-        </div>
-        <p class="text-slate-600">Os seguintes registos foram ignorados na sincronização por já existirem na planilha:</p>
-        <div id="duplicates-list-container" class="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-60 overflow-y-auto font-mono"></div>
-      </div>
-
-      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between">
-        <button type="button" onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm flex items-center gap-1.5">
-          <i class="fa-solid fa-print"></i> Imprimir / Salvar PDF
-        </button>
-        <button type="button" onclick="closeDuplicatesModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: ADD/EDIT SECTOR -->
-  <div id="modal-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
-        <h3 id="modal-folder-title" class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-folder-plus mr-1.5"></i> Novo Setor / Pasta</h3>
-        <button onclick="closeFolderModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-      <form onsubmit="saveFolder(event)" class="p-5 space-y-4 text-xs">
-        <input type="hidden" id="folder-id">
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">Andar de Destino (Mover Pasta)</label>
-          <select id="folder-floor-id" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-indigo-900">
-            <!-- Gerado dinamicamente -->
-          </select>
-        </div>
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
-          <input type="text" id="folder-name" required placeholder="Ex: Informatica, RH, Recepção..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">Cor da Pasta</label>
-          <div class="flex items-center gap-3">
-            <input type="color" id="folder-color" value="#2563eb" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer p-1 bg-white">
-            <span class="text-slate-500">Cor de destaque da pasta</span>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeFolderModal()" class="px-4 py-2 font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-          <button type="submit" class="px-4 py-2 font-bold text-white bg-blue-6
+// Interceção de requisições para funcionamento offline
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      return cachedResponse || fetch(event.request).catch(() => {
+        // Se falhar e for navegação, retorna o index.html em cache
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      });
+    })
+  );
+});
