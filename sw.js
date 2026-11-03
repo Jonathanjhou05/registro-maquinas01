@@ -1,13 +1,11 @@
-const CACHE_NAME = 'infragest-pwa-v1';
+const CACHE_NAME = 'infragest-cache-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/lucide@latest'
+  './manifest.json'
 ];
 
-// Instalação: Salva assets em cache
+// Instalação do Service Worker e salvamento em cache
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -17,7 +15,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Ativação: Limpa caches antigos
+// Ativação e limpeza de caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -33,10 +31,9 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interceção de pedidos HTTP (Estratégia: Cache First com Network Fallback)
+// Interceção de pedidos de rede
 self.addEventListener('fetch', (event) => {
-  // Ignora requisições POST para o Google Webhook (são tratadas pela fila local)
-  if (event.request.method === 'POST') return;
+  if (event.request.method === 'POST') return; // Ignora POSTs para o webhook do Sheets
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
@@ -50,7 +47,6 @@ self.addEventListener('fetch', (event) => {
         });
       });
     }).catch(() => {
-      // Fallback para index.html se falhar a rede
       return caches.match('./index.html');
     })
   );
