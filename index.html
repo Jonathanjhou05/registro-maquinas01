@@ -114,21 +114,21 @@
     <!-- VIEW 1: FLOORS & SECTORS LIST -->
     <section id="view-sectors" class="space-y-4">
       
-      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS (CLICÁVEIS) -->
+      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS -->
       <div class="grid grid-cols-4 gap-2 text-center">
-        <div onclick="filtrarTodasMaquinasPorStatus('Todos')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
           <span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
           <span id="stat-total" class="font-bold text-blue-700 text-sm">0</span>
         </div>
-        <div onclick="filtrarTodasMaquinasPorStatus('Operacional')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-emerald-50 transition">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
           <span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativas</span>
           <span id="stat-operacional" class="font-bold text-emerald-600 text-sm">0</span>
         </div>
-        <div onclick="filtrarTodasMaquinasPorStatus('Manutenção')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-amber-50 transition">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
           <span class="block text-[10px] text-amber-500 font-semibold uppercase">Manut.</span>
           <span id="stat-manutencao" class="font-bold text-amber-600 text-sm">0</span>
         </div>
-        <div onclick="filtrarTodasMaquinasPorStatus('Defeito')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-red-50 transition">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
           <span class="block text-[10px] text-red-500 font-semibold uppercase">Defeito</span>
           <span id="stat-defeito" class="font-bold text-red-600 text-sm">0</span>
         </div>
@@ -588,15 +588,6 @@
     let activeScannerTarget = 'code';
     let currentUser = null;
 
-    // REGISTO DO SERVICE WORKER PARA SUPORTE PWA OFFLINE
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registado:', reg.scope))
-          .catch(err => console.error('Erro ao registar Service Worker:', err));
-      });
-    }
-
     window.onload = async () => {
       loadCustomPeripheralsFromStorage();
       loadCustomModelsFromStorage();
@@ -843,7 +834,7 @@
     }
 
     async function handleLogin(e) {
-      if (e) e.preventDefault();
+      e.preventDefault();
       const usernameInput = document.getElementById('login-username').value.trim();
       const passwordInput = document.getElementById('login-password').value.trim();
       const errorBox = document.getElementById('login-error');
@@ -926,61 +917,6 @@
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
     }
 
-    // FUNÇÃO: FILTRAGEM DE TODAS AS MÁQUINAS DO SISTEMA AO CLICAR NO DASHBOARD DO TOPO
-    function filtrarTodasMaquinasPorStatus(status) {
-      const container = document.getElementById('sectors-list');
-      if(!container) return;
-
-      let filteredMachines = [...machines];
-      if (status !== 'Todos') {
-        filteredMachines = machines.filter(m => m.status === status);
-      }
-
-      container.innerHTML = `<h3 class="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Filtro do Dashboard: ${status} (${filteredMachines.length})</h3>`;
-
-      if (filteredMachines.length === 0) {
-        container.innerHTML += `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-500">Nenhum equipamento encontrado com o estado "${status}".</div>`;
-        return;
-      }
-
-      filteredMachines.forEach(m => {
-        const sec = sectors.find(s => s.id === m.sector_id);
-        const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
-        const locationStr = (floor ? floor.name + ' > ' : '') + (sec ? sec.name : 'Geral');
-        
-        const card = document.createElement('div');
-        card.className = "bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 cursor-pointer hover:border-blue-300 transition-all";
-        card.onclick = () => openMachineDetails(m.id);
-
-        let photoHtml = m.photo_url ? `<img src="${m.photo_url}" class="w-14 h-14 rounded-lg object-cover flex-none border shadow-sm">` : `<div class="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300 flex-none"><i class="fa-solid fa-desktop"></i></div>`;
-        const perfText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum periférico';
-
-        card.innerHTML = `
-          <div class="flex items-start gap-3">
-            ${photoHtml}
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <span class="font-mono font-bold text-blue-700 text-sm">Gab: ${m.code}</span>
-                <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${m.status}</span>
-              </div>
-              ${m.monitor ? `<p class="text-[11px] font-mono text-emerald-700 font-semibold">Mon: ${m.monitor}</p>` : ''}
-              <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-blue-600 font-semibold">(${locationStr})</span></p>
-              <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
-            </div>
-          </div>
-          <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
-            <span>${m.date}</span>
-            <div class="flex items-center gap-3">
-              <button onclick="event.stopPropagation(); moveMachineToSector('${m.id}')" class="text-indigo-600 font-semibold hover:text-indigo-800 flex items-center gap-1"><i class="fa-solid fa-folder-arrow-right"></i> Mover</button>
-              <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
-              <button onclick="event.stopPropagation(); deleteMachine('${m.id}')" class="text-red-500 font-medium hover:text-red-700 flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
-            </div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-
     function handleGlobalSearch(query) {
       const container = document.getElementById('sectors-list');
       if(!container) return;
@@ -1035,14 +971,6 @@
               ${m.monitor ? `<p class="text-[11px] font-mono text-emerald-700 font-semibold">Mon: ${m.monitor}</p>` : ''}
               <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-blue-600 font-semibold">(${locationStr})</span></p>
               <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
-            </div>
-          </div>
-          <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
-            <span>${m.date}</span>
-            <div class="flex items-center gap-3">
-              <button onclick="event.stopPropagation(); moveMachineToSector('${m.id}')" class="text-indigo-600 font-semibold hover:text-indigo-800 flex items-center gap-1"><i class="fa-solid fa-folder-arrow-right"></i> Mover</button>
-              <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
-              <button onclick="event.stopPropagation(); deleteMachine('${m.id}')" class="text-red-500 font-medium hover:text-red-700 flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
             </div>
           </div>
         `;
@@ -1379,40 +1307,6 @@
       });
     }
 
-    // FUNÇÃO: MOVER MÁQUINA DE SETOR / PASTA
-    async function moveMachineToSector(machineId) {
-      if (!sectors || sectors.length === 0) { alert("Não existem setores cadastrados."); return; }
-      
-      const m = machines.find(item => item.id === machineId);
-      if (!m) return;
-
-      const sectorOptionsStr = sectors.map((s, idx) => `${idx + 1}. ${s.name}`).join('\n');
-      const input = prompt(`Selecione a nova pasta para a máquina (Gabinete: ${m.code}):\n\n${sectorOptionsStr}`);
-      if (!input) return;
-
-      let targetSector = null;
-      const idxNum = parseInt(input.trim());
-      if (!isNaN(idxNum) && idxNum >= 1 && idxNum <= sectors.length) {
-        targetSector = sectors[idxNum - 1];
-      } else {
-        targetSector = sectors.find(s => s.name.toLowerCase() === input.trim().toLowerCase());
-      }
-
-      if (targetSector) {
-        const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id }).eq('id', machineId);
-        if (error) { alert("Erro ao mover máquina no servidor: " + error.message); return; }
-
-        m.sector_id = targetSector.id;
-        alert(`✅ Equipamento movido com sucesso para o setor: ${targetSector.name}`);
-        
-        if (currentSectorId) {
-          renderMachines();
-        } else {
-          renderFloorsAndSectors();
-        }
-      } else { alert("Setor/Pasta não encontrado."); }
-    }
-
     function renderMachines() {
       const container = document.getElementById('items-list');
       if(!container) return;
@@ -1457,7 +1351,6 @@
           <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
             <span>${m.date}</span>
             <div class="flex items-center gap-3">
-              <button onclick="event.stopPropagation(); moveMachineToSector('${m.id}')" class="text-indigo-600 font-semibold hover:text-indigo-800 flex items-center gap-1"><i class="fa-solid fa-folder-arrow-right"></i> Mover</button>
               <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
               <button onclick="event.stopPropagation(); deleteMachine('${m.id}')" class="text-red-500 font-medium hover:text-red-700 flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
             </div>
@@ -1570,7 +1463,7 @@
     }
 
     function startScanner(target) {
-      activeScannerTarget = target;
+      activeScannerTarget = target; // 'code' (gabinete) ou 'monitor'
       document.getElementById('scanner-container').classList.remove('hidden');
       if(html5QrcodeScanner) stopScanner();
       try {
@@ -1690,4 +1583,86 @@
         const ticket = `${prefix}-${String(sectorMachinesCount + 1).padStart(3, '0')}`;
 
         const newMachine = {
-          id: 'mac_' + Date.now(), sector_id
+          id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
+          photo_url: currentBase64Photo, date: dateStr, timestamp: Date.now()
+        };
+
+        const { error } = await supabaseClient.from('machines').insert([newMachine]);
+        if (error) { alert("Erro ao salvar máquina no servidor: " + error.message); return; }
+
+        machines.push(newMachine);
+      }
+
+      closeMachineModal();
+      openSectorItems(currentSectorId);
+    }
+
+    async function deleteMachine(id) {
+      if(confirm("Remover esta máquina?")) {
+        const { error } = await supabaseClient.from('machines').delete().eq('id', id);
+        if (error) { alert("Erro ao excluir máquina: " + error.message); return; }
+
+        machines = machines.filter(m => m.id !== id);
+        openSectorItems(currentSectorId);
+      }
+    }
+
+    function openImageView(src, title) {
+      document.getElementById('full-size-image').src = src;
+      document.getElementById('image-modal-title').innerText = title;
+      document.getElementById('modal-image-view').classList.remove('hidden');
+    }
+    function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
+
+    function openExportModal() {
+      if (sectors.length === 0) { alert("Não existem setores."); return; }
+      const container = document.getElementById('export-sectors-checkboxes');
+      container.innerHTML = '';
+      sectors.forEach(sec => {
+        const floor = floors.find(f => f.id === sec.floor_id);
+        const labelName = (floor ? floor.name + ' - ' : '') + sec.name;
+        container.innerHTML += `<label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded"><input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 w-4 h-4"><span class="font-medium text-slate-700">${labelName}</span></label>`;
+      });
+      document.getElementById('modal-export').classList.remove('hidden');
+    }
+    function closeExportModal() { document.getElementById('modal-export').classList.add('hidden'); }
+    function toggleSelectAllExport(status) {
+      document.querySelectorAll('input[name="export-sector-chk"]').forEach(chk => chk.checked = status);
+    }
+
+    function generateAndDownloadCSV() {
+      const selectedSectorIds = Array.from(document.querySelectorAll('input[name="export-sector-chk"]:checked')).map(chk => chk.value);
+      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos um setor."); return; }
+      const filtered = machines.filter(m => selectedSectorIds.includes(m.sector_id));
+      
+      let fileContent = "\uFEFFAndar\tSetor\tNº Ticket\tEtiqueta Gabinete\tEtiqueta Monitor\tModelo\tSO\tEstado\tPeriféricos\tObservações\tData\n";
+      filtered.forEach(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
+        fileContent += `${floor ? floor.name.toUpperCase() : 'GERAL'}\t${sec ? sec.name.toUpperCase() : 'GERAL'}\t${m.ticket}\t${m.code || ''}\t${m.monitor || ''}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
+      });
+      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `InfraGest_Relatorio_${new Date().toISOString().slice(0, 10)}.xls`;
+      link.click();
+      closeExportModal();
+    }
+
+    async function loadAuditLogs() {
+      const container = document.getElementById('audit-logs-list');
+      if(!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">A carregar...</p>';
+      let data = [];
+      if (supabaseClient && navigator.onLine) {
+        const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+        data = res.data || [];
+      }
+      container.innerHTML = data.length === 0 ? '<p class="text-xs text-slate-400 text-center py-2">Sem registos.</p>' : '';
+      data.forEach(log => {
+        container.innerHTML += `<div class="bg-slate-50 p-2.5 rounded-lg border text-xs"><span class="font-bold text-blue-700">${log.user_action}</span><p>${log.details}</p></div>`;
+      });
+    }
+  </script>
+</body>
+</html>
