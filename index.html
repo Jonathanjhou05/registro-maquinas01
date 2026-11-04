@@ -187,7 +187,7 @@
         </div>
       </div>
 
-      <!-- FILTROS RÁPIDOS POR ESTADO (ATUALIZADOS) -->
+      <!-- FILTROS RÁPIDOS POR ESTADO DENTRO DO SETOR -->
       <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
         <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
         <button onclick="filterMachinesByStatus('Ativos')" id="filter-btn-Ativos" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Ativos</button>
@@ -1030,7 +1030,7 @@
       renderMachines();
     }
 
-    // FILTRAGEM AO CLICAR NOS BLOCOS DE ESTATÍSTICAS DO TOPO
+    // FILTRAGEM AO CLICAR NOS BLOCOS DE ESTATÍSTICAS DO TOPO (ABRE O PRIMEIRO SETOR OU MANTÉM O ATUAL)
     function filtrarPorEstado(statusDesejado) {
       if (statusDesejado === 'Todos') {
         currentFilterStatus = 'Todos';
@@ -1039,11 +1039,13 @@
       }
 
       currentFilterStatus = statusDesejado;
-      highlightFilterButton(statusDesejado);
 
+      // Se já estivermos dentro de um setor, apenas aplicamos o filtro e mantemos na tela de itens
       if (currentSectorId) {
+        highlightFilterButton(statusDesejado);
         renderMachines();
       } else if (sectors && sectors.length > 0) {
+        // Se estivermos na tela inicial, entramos no primeiro setor e aplicamos o filtro selecionado
         openSectorItems(sectors[0].id);
         filterMachinesByStatus(statusDesejado);
       }
@@ -1488,9 +1490,10 @@
       if(!container) return;
       container.innerHTML = '';
       
+      // Filtrar estritamente pelo setor atual aberto
       let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
       
-      // APLICAÇÃO DOS NOVOS FILTRAGENS POR ABA
+      // APLICAÇÃO DOS FILTROS POR ABA DENTRO DO SETOR ATUAL
       if(currentFilterStatus === 'Ativos') {
         sectorMachines = sectorMachines.filter(m => m.status === 'Operacional' || m.status === 'Novo');
       } else if(currentFilterStatus === 'Manutenção') {
@@ -1780,7 +1783,7 @@
         const sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
         let maxNumber = 0;
         
-        sectorMachines.forEach(m => {
+        sectorMachines.format = sectorMachines.forEach(m => {
           if (m.ticket && m.ticket.includes('-')) {
             const parts = m.ticket.split('-');
             const num = parseInt(parts[parts.length - 1], 10);
