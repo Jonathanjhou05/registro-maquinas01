@@ -165,7 +165,7 @@
         </div>
       </div>
 
-      <!-- LISTA DE PASTAS DO ANDAR SELECIONADO (EM ORDEM ALFABÉTICA) -->
+      <!-- LISTA DE PASTAS DO ANDAR SELECIONADO (ORDENADAS ALFABETICAMENTE) -->
       <div id="sectors-list" class="grid grid-cols-1 gap-3"></div>
     </section>
 
@@ -177,8 +177,8 @@
           <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registadas</p>
         </div>
         <div class="flex items-center gap-2">
-          <!-- BOTÃO PARA REORGANIZAR/ATUALIZAR OS TICKETS DESTE SETOR (ELIMINAR SALTOS) -->
-          <button onclick="reorganizeSectorTickets()" title="Reorganizar e corrigir saltos nos tickets deste setor" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
+          <!-- BOTÃO PARA REORGANIZAR/ATUALIZAR OS TICKETS DESTE SETOR -->
+          <button onclick="reorganizeSectorTickets()" title="Organizar tickets sequencialmente" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
             <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Organizar Tickets</span>
           </button>
           <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
@@ -187,12 +187,25 @@
         </div>
       </div>
 
-      <!-- FILTROS RÁPIDOS POR ESTADO DENTRO DO SETOR -->
-      <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
-        <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
-        <button onclick="filterMachinesByStatus('Ativos')" id="filter-btn-Ativos" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Ativos</button>
-        <button onclick="filterMachinesByStatus('Manutenção')" id="filter-btn-Manutenção" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Manutenção</button>
-        <button onclick="filterMachinesByStatus('Defeito')" id="filter-btn-Defeito" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Defeito</button>
+      <!-- BARRA DE FILTROS DE ESTADO E ORDENAÇÃO ALFABÉTICA/TICKET -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+        <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
+          <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
+          <button onclick="filterMachinesByStatus('Ativos')" id="filter-btn-Ativos" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Ativos</button>
+          <button onclick="filterMachinesByStatus('Manutenção')" id="filter-btn-Manutenção" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Manutenção</button>
+          <button onclick="filterMachinesByStatus('Defeito')" id="filter-btn-Defeito" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Defeito</button>
+        </div>
+
+        <!-- FILTRO DE ORDENAÇÃO (ALFABÉTICA / TICKET / RECENTES) -->
+        <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs shadow-sm">
+          <i class="fa-solid fa-arrow-down-wide-short text-slate-400"></i>
+          <span class="text-slate-500 font-semibold">Ordenar:</span>
+          <select id="machine-sort-select" onchange="handleMachineSortChange(this.value)" class="bg-transparent font-bold text-blue-700 focus:outline-none cursor-pointer">
+            <option value="ticket">Ticket (Sequencial)</option>
+            <option value="alphabetical">Alfabética (Gabinete)</option>
+            <option value="recent">Mais Recentes</option>
+          </select>
+        </div>
       </div>
 
       <div id="items-list" class="space-y-3"></div>
@@ -607,6 +620,7 @@
     let currentFloorId = null;
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
+    let currentMachineSort = 'ticket'; // Opções: 'ticket', 'alphabetical', 'recent'
     let currentBase64Photo = null;
     let html5QrcodeScanner = null;
     let activeScannerTarget = 'code';
@@ -998,7 +1012,7 @@
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
     }
 
-    // REORGANIZAR E ATUALIZAR TICKETS DO SETOR ATUAL (ELIMINAR SALTOS)
+    // REORGANIZAR E ATUALIZAR TICKETS DO SETOR ATUAL
     async function reorganizeSectorTickets() {
       if (!currentSectorId) return;
       const sec = sectors.find(s => s.id === currentSectorId);
@@ -1011,7 +1025,6 @@
       const prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
       let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
       
-      // Ordenar por data/timestamp de criação
       sectorMachines.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
       let updatedCount = 0;
@@ -1030,7 +1043,7 @@
       renderMachines();
     }
 
-    // FILTRAGEM AO CLICAR NOS BLOCOS DE ESTATÍSTICAS DO TOPO (ABRE O PRIMEIRO SETOR OU MANTÉM O ATUAL)
+    // FILTRAGEM AO CLICAR NOS BLOCOS DE ESTATÍSTICAS DO TOPO
     function filtrarPorEstado(statusDesejado) {
       if (statusDesejado === 'Todos') {
         currentFilterStatus = 'Todos';
@@ -1040,15 +1053,19 @@
 
       currentFilterStatus = statusDesejado;
 
-      // Se já estivermos dentro de um setor, apenas aplicamos o filtro e mantemos na tela de itens
       if (currentSectorId) {
         highlightFilterButton(statusDesejado);
         renderMachines();
       } else if (sectors && sectors.length > 0) {
-        // Se estivermos na tela inicial, entramos no primeiro setor e aplicamos o filtro selecionado
         openSectorItems(sectors[0].id);
         filterMachinesByStatus(statusDesejado);
       }
+    }
+
+    // ALTERAR TIPO DE ORDENAÇÃO DE MÁQUINAS NA TELA DE ITENS
+    function handleMachineSortChange(sortType) {
+      currentMachineSort = sortType;
+      renderMachines();
     }
 
     // MOVER MÁQUINA PARA OUTRO SETOR / PASTA
@@ -1072,7 +1089,6 @@
 
       const targetSector = sectors[idxNum - 1];
 
-      // Ao mover, recalcular o ticket no novo setor para evitar duplicatas
       const targetSecMachines = machines.filter(item => item.sector_id === targetSector.id);
       let maxNum = 0;
       targetSecMachines.forEach(item => {
@@ -1343,6 +1359,7 @@
       }
 
       const floorSectors = sectors.filter(s => s.floor_id === currentFloorId);
+      // PASTAS EM ORDEM ALFABÉTICA RIGOROSA
       const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       if (sortedSectors.length === 0) {
@@ -1490,16 +1507,29 @@
       if(!container) return;
       container.innerHTML = '';
       
-      // Filtrar estritamente pelo setor atual aberto
       let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
       
-      // APLICAÇÃO DOS FILTROS POR ABA DENTRO DO SETOR ATUAL
+      // FILTRO POR ESTADO
       if(currentFilterStatus === 'Ativos') {
         sectorMachines = sectorMachines.filter(m => m.status === 'Operacional' || m.status === 'Novo');
       } else if(currentFilterStatus === 'Manutenção') {
         sectorMachines = sectorMachines.filter(m => m.status === 'Manutenção' || m.status === 'Backup');
       } else if(currentFilterStatus === 'Defeito') {
         sectorMachines = sectorMachines.filter(m => m.status === 'Defeito');
+      }
+
+      // ORDENAÇÃO (TICKET / ALFABÉTICA / RECENTES)
+      if (currentMachineSort === 'alphabetical') {
+        sectorMachines.sort((a, b) => String(a.code || '').localeCompare(String(b.code || ''), 'pt-BR', { sensitivity: 'accent' }));
+      } else if (currentMachineSort === 'recent') {
+        sectorMachines.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      } else {
+        // Padrão: Ordem por Ticket (ex: TICKET-001, TICKET-002...)
+        sectorMachines.sort((a, b) => {
+          const tA = a.ticket || '';
+          const tB = b.ticket || '';
+          return tA.localeCompare(tB, 'pt-BR', { numeric: true, sensitivity: 'accent' });
+        });
       }
 
       document.getElementById('current-sector-count').innerText = `${sectorMachines.length} máquina(s) encontrada(s)`;
@@ -1711,7 +1741,6 @@
             const now = new Date();
             const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             
-            // Calcular o próximo ticket seguro no setor
             const sectorMachines = machines.filter(m => m.sector_id === sectorId);
             let maxNumber = 0;
             sectorMachines.forEach(m => {
@@ -1779,11 +1808,10 @@
       } else {
         const prefix = sec ? sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) : "GER";
         
-        // CÁLCULO SEGURO CONTRA DUPLICATAS DE TICKET
         const sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
         let maxNumber = 0;
         
-        sectorMachines.format = sectorMachines.forEach(m => {
+        sectorMachines.forEach(m => {
           if (m.ticket && m.ticket.includes('-')) {
             const parts = m.ticket.split('-');
             const num = parseInt(parts[parts.length - 1], 10);
