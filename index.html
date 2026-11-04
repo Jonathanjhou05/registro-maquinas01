@@ -120,8 +120,8 @@
           <span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
           <span id="stat-total" class="font-bold text-blue-700 text-sm">0</span>
         </div>
-        <div onclick="filtrarPorEstado('Operacional')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-emerald-50 transition">
-          <span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativas</span>
+        <div onclick="filtrarPorEstado('Ativos')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-emerald-50 transition">
+          <span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativos</span>
           <span id="stat-operacional" class="font-bold text-emerald-600 text-sm">0</span>
         </div>
         <div onclick="filtrarPorEstado('Manutenção')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-amber-50 transition">
@@ -187,14 +187,12 @@
         </div>
       </div>
 
-      <!-- FILTROS RÁPIDOS POR ESTADO -->
+      <!-- FILTROS RÁPIDOS POR ESTADO (ATUALIZADOS) -->
       <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
         <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
-        <button onclick="filterMachinesByStatus('Operacional')" id="filter-btn-Operacional" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Operacional</button>
+        <button onclick="filterMachinesByStatus('Ativos')" id="filter-btn-Ativos" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Ativos</button>
         <button onclick="filterMachinesByStatus('Manutenção')" id="filter-btn-Manutenção" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Manutenção</button>
-        <button onclick="filterMachinesByStatus('Backup')" id="filter-btn-Backup" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Backup</button>
         <button onclick="filterMachinesByStatus('Defeito')" id="filter-btn-Defeito" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Defeito</button>
-        <button onclick="filterMachinesByStatus('Novo')" id="filter-btn-Novo" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Novo</button>
       </div>
 
       <div id="items-list" class="space-y-3"></div>
@@ -995,8 +993,8 @@
 
     function updateDashboardStats() {
       document.getElementById('stat-total').innerText = machines.length;
-      document.getElementById('stat-operacional').innerText = machines.filter(m => m.status === 'Operacional').length;
-      document.getElementById('stat-manutencao').innerText = machines.filter(m => m.status === 'Manutenção').length;
+      document.getElementById('stat-operacional').innerText = machines.filter(m => m.status === 'Operacional' || m.status === 'Novo').length;
+      document.getElementById('stat-manutencao').innerText = machines.filter(m => m.status === 'Manutenção' || m.status === 'Backup').length;
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
     }
 
@@ -1474,7 +1472,7 @@
     }
 
     function highlightFilterButton(activeStatus) {
-      ['Todos', 'Operacional', 'Manutenção', 'Backup', 'Defeito', 'Novo'].forEach(st => {
+      ['Todos', 'Ativos', 'Manutenção', 'Defeito'].forEach(st => {
         const btn = document.getElementById(`filter-btn-${st}`);
         if(!btn) return;
         if(st === activeStatus) {
@@ -1491,8 +1489,14 @@
       container.innerHTML = '';
       
       let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
-      if(currentFilterStatus !== 'Todos') {
-        sectorMachines = sectorMachines.filter(m => m.status === currentFilterStatus);
+      
+      // APLICAÇÃO DOS NOVOS FILTRAGENS POR ABA
+      if(currentFilterStatus === 'Ativos') {
+        sectorMachines = sectorMachines.filter(m => m.status === 'Operacional' || m.status === 'Novo');
+      } else if(currentFilterStatus === 'Manutenção') {
+        sectorMachines = sectorMachines.filter(m => m.status === 'Manutenção' || m.status === 'Backup');
+      } else if(currentFilterStatus === 'Defeito') {
+        sectorMachines = sectorMachines.filter(m => m.status === 'Defeito');
       }
 
       document.getElementById('current-sector-count').innerText = `${sectorMachines.length} máquina(s) encontrada(s)`;
