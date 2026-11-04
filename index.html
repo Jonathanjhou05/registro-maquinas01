@@ -114,21 +114,21 @@
     <!-- VIEW 1: FLOORS & SECTORS LIST -->
     <section id="view-sectors" class="space-y-4">
       
-      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS -->
+      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS (CLICÁVEIS) -->
       <div class="grid grid-cols-4 gap-2 text-center">
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+        <div onclick="filtrarPorEstado('Todos')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition">
           <span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
           <span id="stat-total" class="font-bold text-blue-700 text-sm">0</span>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+        <div onclick="filtrarPorEstado('Operacional')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-emerald-50 transition">
           <span class="block text-[10px] text-emerald-500 font-semibold uppercase">Ativas</span>
           <span id="stat-operacional" class="font-bold text-emerald-600 text-sm">0</span>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+        <div onclick="filtrarPorEstado('Manutenção')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-amber-50 transition">
           <span class="block text-[10px] text-amber-500 font-semibold uppercase">Manut.</span>
           <span id="stat-manutencao" class="font-bold text-amber-600 text-sm">0</span>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+        <div onclick="filtrarPorEstado('Defeito')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-red-50 transition">
           <span class="block text-[10px] text-red-500 font-semibold uppercase">Defeito</span>
           <span id="stat-defeito" class="font-bold text-red-600 text-sm">0</span>
         </div>
@@ -588,6 +588,15 @@
     let activeScannerTarget = 'code';
     let currentUser = null;
 
+    // Registar o Service Worker para suporte PWA Offline
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker registado:', reg.scope))
+          .catch(err => console.error('Erro ao registar Service Worker:', err));
+      });
+    }
+
     window.onload = async () => {
       loadCustomPeripheralsFromStorage();
       loadCustomModelsFromStorage();
@@ -915,6 +924,55 @@
       document.getElementById('stat-operacional').innerText = machines.filter(m => m.status === 'Operacional').length;
       document.getElementById('stat-manutencao').innerText = machines.filter(m => m.status === 'Manutenção').length;
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
+    }
+
+    // FILTRAGEM AO CLICAR NOS BLOCOS DE ESTATÍSTICAS DO TOPO
+    function filtrarPorEstado(statusDesejado) {
+      if (statusDesejado === 'Todos') {
+        currentFilterStatus = 'Todos';
+        switchTab('sectors');
+        return;
+      }
+
+      currentFilterStatus = statusDesejado;
+      highlightFilterButton(statusDesejado);
+
+      if (currentSectorId) {
+        renderMachines();
+      } else if (sectors && sectors.length > 0) {
+        openSectorItems(sectors[0].id);
+        filterMachinesByStatus(statusDesejado);
+      }
+    }
+
+    // MOVER MÁQUINA PARA OUTRO SETOR / PASTA
+    async function openMoveMachineModal(machineId) {
+      const m = machines.find(item => item.id === machineId);
+      if (!m) return;
+
+      const sectorOptions = sectors.map((s, idx) => {
+        const fl = floors.find(f => f.id === s.floor_id);
+        return `${idx + 1}. ${(fl ? fl.name + ' > ' : '')}${s.name}`;
+      }).join('\n');
+
+      const input = prompt(`Selecione o número do novo setor para onde deseja mover a máquina (${m.code}):\n\n${sectorOptions}`);
+      if (!input) return;
+
+      const idxNum = parseInt(input.trim());
+      if (isNaN(idxNum) || idxNum < 1 || idxNum > sectors.length) {
+        alert("Opção inválida.");
+        return;
+      }
+
+      const targetSector = sectors[idxNum - 1];
+
+      const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id }).eq('id', machineId);
+      if (error) { alert("Erro ao mover máquina no servidor: " + error.message); return; }
+
+      m.sector_id = targetSector.id;
+      alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name}`);
+      renderFloorsAndSectors();
+      if (currentSectorId) renderMachines();
     }
 
     function handleGlobalSearch(query) {
@@ -1351,6 +1409,7 @@
           <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
             <span>${m.date}</span>
             <div class="flex items-center gap-3">
+              <button onclick="event.stopPropagation(); openMoveMachineModal('${m.id}')" class="text-indigo-600 font-semibold hover:text-indigo-800 flex items-center gap-1"><i class="fa-solid fa-folder-arrow-right"></i> Mover</button>
               <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
               <button onclick="event.stopPropagation(); deleteMachine('${m.id}')" class="text-red-500 font-medium hover:text-red-700 flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
             </div>
@@ -1463,7 +1522,7 @@
     }
 
     function startScanner(target) {
-      activeScannerTarget = target; // 'code' (gabinete) ou 'monitor'
+      activeScannerTarget = target;
       document.getElementById('scanner-container').classList.remove('hidden');
       if(html5QrcodeScanner) stopScanner();
       try {
@@ -1579,8 +1638,22 @@
         }
       } else {
         const prefix = sec ? sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) : "GER";
-        const sectorMachinesCount = machines.filter(m => m.sector_id === currentSectorId).length;
-        const ticket = `${prefix}-${String(sectorMachinesCount + 1).padStart(3, '0')}`;
+        
+        // CORREÇÃO DE TICKET DUPLICADO: Calcula com base no maior número existente no setor
+        const sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
+        let maxNumber = 0;
+        
+        sectorMachines.forEach(m => {
+          if (m.ticket && m.ticket.includes('-')) {
+            const parts = m.ticket.split('-');
+            const num = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(num) && num > maxNumber) {
+              maxNumber = num;
+            }
+          }
+        });
+
+        const ticket = `${prefix}-${String(maxNumber + 1).padStart(3, '0')}`;
 
         const newMachine = {
           id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
