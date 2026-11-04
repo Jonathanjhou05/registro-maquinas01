@@ -31,8 +31,8 @@
     body { -webkit-tap-highlight-color: transparent; }
     @media print {
       body * { visibility: hidden; }
-      #printable-ticket, #printable-ticket *, #printable-duplicates, #printable-duplicates * { visibility: visible; }
-      #printable-ticket, #printable-duplicates { position: absolute; left: 0; top: 0; width: 100%; }
+      #printable-ticket, #printable-ticket *, #printable-sync-report, #printable-sync-report * { visibility: visible; }
+      #printable-ticket, #printable-sync-report { position: absolute; left: 0; top: 0; width: 100%; }
     }
   </style>
 </head>
@@ -176,9 +176,15 @@
           <h2 id="current-sector-title" class="font-bold text-base text-slate-800">Setor</h2>
           <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registadas</p>
         </div>
-        <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
-          <i class="fa-solid fa-plus"></i> Cadastrar
-        </button>
+        <div class="flex items-center gap-2">
+          <!-- BOTÃO PARA REORGANIZAR/ATUALIZAR OS TICKETS DESTE SETOR (ELIMINAR SALTOS) -->
+          <button onclick="reorganizeSectorTickets()" title="Reorganizar e corrigir saltos nos tickets deste setor" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Organizar Tickets</span>
+          </button>
+          <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
+            <i class="fa-solid fa-plus"></i> Cadastrar
+          </button>
+        </div>
       </div>
 
       <!-- FILTROS RÁPIDOS POR ESTADO -->
@@ -253,28 +259,48 @@
     </button>
   </nav>
 
-  <!-- MODAL: RELATÓRIO DE DUPLICATAS -->
-  <div id="modal-duplicates-report" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+  <!-- MODAL: POP-UP DE RELATÓRIO DE SINCRONIZAÇÃO COMPLETO -->
+  <div id="modal-sync-report" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
-      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-amber-50 flex-none">
-        <h3 class="font-bold text-amber-800 text-sm"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Relatório de Duplicatas Detetadas</h3>
-        <button onclick="closeDuplicatesModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-purple-50 flex-none">
+        <h3 class="font-bold text-purple-900 text-sm"><i class="fa-solid fa-square-poll-vertical mr-1.5 text-purple-600"></i> Relatório de Sincronização com o Google Sheets</h3>
+        <button onclick="closeSyncReportModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div id="printable-duplicates" class="p-5 space-y-3 overflow-y-auto flex-1 text-xs bg-white">
+      <div id="printable-sync-report" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
         <div class="text-center pb-2 border-b">
-          <h4 class="font-bold text-sm text-slate-800">Relatório de Conflitos / Duplicatas na Sincronização</h4>
-          <p id="dup-report-date" class="text-[11px] text-slate-500 mt-0.5"></p>
+          <h4 class="font-bold text-sm text-slate-800">Resumo da Sincronização de Dados</h4>
+          <p id="sync-report-date" class="text-[11px] text-slate-500 mt-0.5"></p>
         </div>
-        <p class="text-slate-600">Os seguintes registos foram ignorados na sincronização por já existirem na planilha:</p>
-        <div id="duplicates-list-container" class="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-60 overflow-y-auto font-mono"></div>
+
+        <!-- BLOCOS DE ESTATÍSTICAS DO SYNC -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
+            <span class="block text-[10px] text-emerald-600 font-bold uppercase">Enviados (Novos)</span>
+            <span id="sync-count-sent" class="font-extrabold text-emerald-700 text-base">0</span>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
+            <span class="block text-[10px] text-amber-600 font-bold uppercase">Duplicados</span>
+            <span id="sync-count-duplicates" class="font-extrabold text-amber-700 text-base">0</span>
+          </div>
+          <div class="bg-red-50 border border-red-200 p-2.5 rounded-xl">
+            <span class="block text-[10px] text-red-600 font-bold uppercase">Inconsistentes</span>
+            <span id="sync-count-inconsistent" class="font-extrabold text-red-700 text-base">0</span>
+          </div>
+        </div>
+
+        <!-- LISTAGEM DETALHADA DOS ITENS -->
+        <div class="space-y-2">
+          <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Detalhes dos Registos Analisados:</span>
+          <div id="sync-details-container" class="space-y-1.5 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-52 overflow-y-auto font-mono text-[11px]"></div>
+        </div>
       </div>
 
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between">
         <button type="button" onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm flex items-center gap-1.5">
           <i class="fa-solid fa-print"></i> Imprimir / Salvar PDF
         </button>
-        <button type="button" onclick="closeDuplicatesModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
+        <button type="button" onclick="closeSyncReportModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
       </div>
     </div>
   </div>
@@ -745,6 +771,7 @@
       }).subscribe();
     }
 
+    // FUNÇÃO DE SINCRONIZAÇÃO COMPLETA COM POP-UP DE RELATÓRIO
     async function forceSyncWithGoogleSheets() {
       if (!navigator.onLine) { alert("⚠️ Encontra-se offline."); return; }
       if (!machines || machines.length === 0) { alert("⚠️ Não existem máquinas para sincronizar."); return; }
@@ -766,17 +793,30 @@
 
         let newItemsToSend = [];
         let duplicateItemsFound = [];
+        let inconsistentItemsFound = [];
 
         machines.forEach(m => {
-          const codeTrim = String(m.code || '').trim().toLowerCase();
+          const codeTrim = String(m.code || '').trim();
           const sec = sectors.find(s => s.id === m.sector_id);
           const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
           const floorName = floor ? floor.name.toUpperCase() : 'GERAL';
           const sectorName = sec ? sec.name.toUpperCase() : 'GERAL';
 
-          if (existingCodesInSheet.includes(codeTrim)) {
+          // Verificar inconsistências (ex: sem código de património ou sem setor)
+          if (!codeTrim || codeTrim === '' || !m.sector_id) {
+            inconsistentItemsFound.push({
+              code: codeTrim || 'SEM CÓDIGO',
+              model: m.model || 'Desconhecido',
+              sector: sectorName,
+              reason: 'Falta código de património ou setor'
+            });
+            return;
+          }
+
+          // Verificar duplicatas na planilha pelo código de patrimônio
+          if (existingCodesInSheet.includes(codeTrim.toLowerCase())) {
             duplicateItemsFound.push({
-              code: m.code,
+              code: codeTrim,
               model: m.model || 'Não especificado',
               sector: sectorName,
               reason: 'Já existe na planilha'
@@ -786,7 +826,7 @@
               floor: floorName,
               sector: sectorName,
               ticket: m.ticket || '-', 
-              code: m.code || '-', 
+              code: codeTrim, 
               monitor: m.monitor || '-', 
               model: m.model || '-',
               os: m.os || '-', 
@@ -798,6 +838,7 @@
           }
         });
 
+        // Enviar os novos registos válidos e não duplicados
         if (newItemsToSend.length > 0) {
           await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
             method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
@@ -805,11 +846,12 @@
           });
         }
 
-        if (duplicateItemsFound.length > 0) {
-          showDuplicatesReport(duplicateItemsFound);
-        } else {
-          alert(`✅ Sincronização concluída!\nAs abas correspondentes foram verificadas/criadas na planilha e ${newItemsToSend.length} novos registos foram enviados.`);
-        }
+        // Exibir o Pop-up de Relatório Completo
+        showSyncReportModal({
+          sentCount: newItemsToSend.length,
+          duplicates: duplicateItemsFound,
+          inconsistencies: inconsistentItemsFound
+        });
 
       } catch (err) {
         alert("❌ Erro ao comunicar com a planilha Google Sheets.");
@@ -819,27 +861,59 @@
       }
     }
 
-    function showDuplicatesReport(duplicates) {
-      const container = document.getElementById('duplicates-list-container');
-      container.innerHTML = '';
-      document.getElementById('dup-report-date').innerText = "Data: " + new Date().toLocaleString('pt-PT');
+    function showSyncReportModal(reportData) {
+      document.getElementById('sync-count-sent').innerText = reportData.sentCount;
+      document.getElementById('sync-count-duplicates').innerText = reportData.duplicates.length;
+      document.getElementById('sync-count-inconsistent').innerText = reportData.inconsistencies.length;
+      document.getElementById('sync-report-date').innerText = "Data: " + new Date().toLocaleString('pt-PT');
 
-      duplicates.forEach((item, idx) => {
+      const container = document.getElementById('sync-details-container');
+      container.innerHTML = '';
+
+      if (reportData.sentCount === 0 && reportData.duplicates.length === 0 && reportData.inconsistencies.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-400 py-2">Nenhum registo processado.</div>`;
+      }
+
+      reportData.duplicates.forEach((item, idx) => {
         container.innerHTML += `
-          <div class="bg-white p-2.5 rounded-lg border border-amber-200 text-xs flex justify-between items-center">
+          <div class="bg-amber-50 p-2 rounded border border-amber-200 flex justify-between items-center text-xs">
             <div>
-              <span class="font-bold text-slate-800">${idx + 1}. Gabinete: <strong class="text-blue-700">${item.code}</strong></span>
-              <p class="text-[11px] text-slate-500">Modelo: ${item.model} | Setor: ${item.sector}</p>
+              <span class="font-bold text-amber-900">Duplicado: ${item.code}</span>
+              <p class="text-[10px] text-slate-500">Setor: ${item.sector} | ${item.reason}</p>
             </div>
-            <span class="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-1 rounded">⚠️ Duplicado</span>
+            <span class="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold">⚠️ DUPLICADO</span>
           </div>
         `;
       });
-      document.getElementById('modal-duplicates-report').classList.remove('hidden');
+
+      reportData.inconsistencies.forEach((item, idx) => {
+        container.innerHTML += `
+          <div class="bg-red-50 p-2 rounded border border-red-200 flex justify-between items-center text-xs">
+            <div>
+              <span class="font-bold text-red-900">Inconsistente: ${item.code}</span>
+              <p class="text-[10px] text-slate-500">Setor: ${item.sector} | ${item.reason}</p>
+            </div>
+            <span class="text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded font-bold">❌ ERRO</span>
+          </div>
+        `;
+      });
+
+      if (reportData.sentCount > 0) {
+        container.innerHTML += `
+          <div class="bg-emerald-50 p-2 rounded border border-emerald-200 flex justify-between items-center text-xs">
+            <div>
+              <span class="font-bold text-emerald-900">${reportData.sentCount} novos registos enviados com sucesso.</span>
+            </div>
+            <span class="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">✅ ENVIADO</span>
+          </div>
+        `;
+      }
+
+      document.getElementById('modal-sync-report').classList.remove('hidden');
     }
 
-    function closeDuplicatesModal() {
-      document.getElementById('modal-duplicates-report').classList.add('hidden');
+    function closeSyncReportModal() {
+      document.getElementById('modal-sync-report').classList.add('hidden');
     }
 
     async function handleLogin(e) {
@@ -926,6 +1000,38 @@
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
     }
 
+    // REORGANIZAR E ATUALIZAR TICKETS DO SETOR ATUAL (ELIMINAR SALTOS)
+    async function reorganizeSectorTickets() {
+      if (!currentSectorId) return;
+      const sec = sectors.find(s => s.id === currentSectorId);
+      if (!sec) return;
+
+      if (!confirm(`Deseja reorganizar sequencialmente todos os tickets do setor "${sec.name}"?\nIsso corrigirá eventuais saltos e numerará as máquinas de 001 em diante por ordem cronológica.`)) {
+        return;
+      }
+
+      const prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
+      let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
+      
+      // Ordenar por data/timestamp de criação
+      sectorMachines.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+      let updatedCount = 0;
+      for (let i = 0; i < sectorMachines.length; i++) {
+        const m = sectorMachines[i];
+        const newTicket = `${prefix}-${String(i + 1).padStart(3, '0')}`;
+        
+        if (m.ticket !== newTicket) {
+          m.ticket = newTicket;
+          const { error } = await supabaseClient.from('machines').update({ ticket: newTicket }).eq('id', m.id);
+          if (!error) updatedCount++;
+        }
+      }
+
+      alert(`✅ Reorganização concluída!\n${updatedCount} tickets foram atualizados sem saltos no setor ${sec.name}.`);
+      renderMachines();
+    }
+
     // FILTRAGEM AO CLICAR NOS BLOCOS DE ESTATÍSTICAS DO TOPO
     function filtrarPorEstado(statusDesejado) {
       if (statusDesejado === 'Todos') {
@@ -966,11 +1072,25 @@
 
       const targetSector = sectors[idxNum - 1];
 
-      const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id }).eq('id', machineId);
+      // Ao mover, recalcular o ticket no novo setor para evitar duplicatas
+      const targetSecMachines = machines.filter(item => item.sector_id === targetSector.id);
+      let maxNum = 0;
+      targetSecMachines.forEach(item => {
+        if (item.ticket && item.ticket.includes('-')) {
+          const parts = item.ticket.split('-');
+          const num = parseInt(parts[parts.length - 1], 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+      });
+      const prefix = targetSector.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
+      const newTicket = `${prefix}-${String(maxNum + 1).padStart(3, '0')}`;
+
+      const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id, ticket: newTicket }).eq('id', machineId);
       if (error) { alert("Erro ao mover máquina no servidor: " + error.message); return; }
 
       m.sector_id = targetSector.id;
-      alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name}`);
+      m.ticket = newTicket;
+      alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name} (Novo Ticket: ${newTicket})`);
       renderFloorsAndSectors();
       if (currentSectorId) renderMachines();
     }
@@ -1584,9 +1704,22 @@
             const now = new Date();
             const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             
+            // Calcular o próximo ticket seguro no setor
+            const sectorMachines = machines.filter(m => m.sector_id === sectorId);
+            let maxNumber = 0;
+            sectorMachines.forEach(m => {
+              if (m.ticket && m.ticket.includes('-')) {
+                const parts = m.ticket.split('-');
+                const num = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(num) && num > maxNumber) maxNumber = num;
+              }
+            });
+            const prefix = sectorNameRaw.replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
+            const ticket = `${prefix}-${String(maxNumber + 1).padStart(3, '0')}`;
+
             const newMachine = {
               id: 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-              sector_id: sectorId, ticket: 'SET-001', code, monitor, model, os, status,
+              sector_id: sectorId, ticket, code, monitor, model, os, status,
               peripherals: ['Gabinete', 'Monitor'], notes, date: dateStr, timestamp: Date.now()
             };
 
@@ -1639,7 +1772,7 @@
       } else {
         const prefix = sec ? sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) : "GER";
         
-        // CORREÇÃO DE TICKET DUPLICADO: Calcula com base no maior número existente no setor
+        // CÁLCULO SEGURO CONTRA DUPLICATAS DE TICKET
         const sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
         let maxNumber = 0;
         
