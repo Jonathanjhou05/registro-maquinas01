@@ -114,7 +114,7 @@
     <!-- VIEW 1: FLOORS & SECTORS LIST -->
     <section id="view-sectors" class="space-y-4">
       
-      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS (CLICÁVEIS PARA FILTRAR) -->
+      <!-- DASHBOARD DE ESTATÍSTICAS RÁPIDAS (CLICÁVEIS) -->
       <div class="grid grid-cols-4 gap-2 text-center">
         <div onclick="filtrarPorEstado('Todos')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50 transition">
           <span class="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
@@ -140,7 +140,7 @@
         <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar andar, pasta, gabinete, monitor, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
       </div>
 
-      <!-- ABAS DOS ANDARES ESTILO NAVEGADOR COM BOTÃO + -->
+      <!-- ABAS DOS ANDARES -->
       <div class="space-y-2">
         <div class="flex justify-between items-center">
           <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Andares (Abas)</span>
@@ -148,12 +148,10 @@
             <i class="fa-solid fa-folder-plus"></i> Novo Setor
           </button>
         </div>
-        
-        <!-- Lista de Abas de Andares -->
         <div id="floors-tabs-container" class="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs"></div>
       </div>
 
-      <!-- CABEÇALHO DO ANDAR ATUAL E SUAS PASTAS -->
+      <!-- CABEÇALHO DO ANDAR ATUAL -->
       <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
           <h3 id="current-floor-title" class="font-bold text-sm text-indigo-900">Andar</h3>
@@ -165,7 +163,6 @@
         </div>
       </div>
 
-      <!-- LISTA DE PASTAS DO ANDAR SELECIONADO -->
       <div id="sectors-list" class="grid grid-cols-1 gap-3"></div>
     </section>
 
@@ -212,9 +209,9 @@
     </button>
   </nav>
 
-  <!-- SCRIPTS E LÓGICA INTEGRA DAS ADIÇÕES -->
+  <!-- SCRIPT COMPLETO DE SUPORTE -->
   <script>
-    // Registar o Service Worker para suporte Offline PWA
+    // Registar o Service Worker para suporte PWA Offline
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -223,7 +220,7 @@
       });
     }
 
-    // Monitorar estado online/offline
+    // Monitorizar estado online/offline
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
 
@@ -235,6 +232,25 @@
         } else {
           banner.classList.add('hidden');
         }
+      }
+    }
+
+    // CORREÇÃO DO LOGIN A PISCAR (PREVENT DEFAULT ESTÁVEL)
+    function handleLogin(event) {
+      if (event) event.preventDefault();
+      
+      const userField = document.getElementById('login-username').value.trim();
+      const passField = document.getElementById('login-password').value.trim();
+      const errorBox = document.getElementById('login-error');
+
+      // Validação interna ou integração existente
+      if (userField === 'admin' && passField === 'admin') {
+        if (errorBox) errorBox.classList.add('hidden');
+        const loginView = document.getElementById('view-login');
+        if (loginView) loginView.style.display = 'none';
+        localStorage.setItem('infragest_logged', 'true');
+      } else {
+        if (errorBox) errorBox.classList.remove('hidden');
       }
     }
 
@@ -264,9 +280,8 @@
       }
     }
 
-    // FUNÇÃO: FILTRAR AO CLICAR EM TOTAL, ATIVAS, MANUT. OU DEFEITO
+    // FUNÇÃO: FILTRAR AO CLICAR NOS CARDS DO DASHBOARD
     function filtrarPorEstado(statusDesejado) {
-      // Garantir que navegamos para a vista de itens se necessário
       const viewSectors = document.getElementById('view-sectors');
       const viewItems = document.getElementById('view-items');
       
@@ -275,7 +290,6 @@
         viewItems.classList.remove('hidden');
       }
 
-      // Atualiza os botões de filtro existentes na tela
       const statusMap = {
         'Todos': 'Todos',
         'Operacional': 'Operacional',
