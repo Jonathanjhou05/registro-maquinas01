@@ -47,8 +47,8 @@
   <div id="view-login" class="fixed inset-0 bg-blue-600 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden p-6 space-y-6">
       <div class="text-center space-y-2">
-        <div class="w-20 h-20 bg-blue-50 rounded-2xl mx-auto flex items-center justify-center shadow-inner overflow-hidden border border-blue-100 p-2">
-          <img src="favicon-96x96.png" alt="InfraGest Logo" class="w-full h-full object-contain">
+        <div class="w-16 h-16 bg-blue-50 rounded-2xl mx-auto flex items-center justify-center shadow-inner border border-blue-100 text-blue-600 text-2xl font-bold">
+          IG
         </div>
         <h2 class="font-bold text-slate-800 text-lg">InfraGest</h2>
         <p class="text-xs text-slate-500">Entre com as suas credenciais para aceder ao sistema</p>
@@ -134,10 +134,15 @@
         </div>
       </div>
 
-      <!-- BARRA DE PESQUISA GLOBAL -->
-      <div class="relative">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar andar, pasta, gabinete, monitor, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+      <!-- BARRA DE PESQUISA GLOBAL (COM BOTÃO DE RECARREGAR DADOS) -->
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" id="global-search" oninput="handleGlobalSearch(this.value)" placeholder="Pesquisar andar, pasta, gabinete, monitor, modelo..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+        </div>
+        <button onclick="loadDataFromServer()" title="Atualizar / Recarregar Dados do Servidor" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 flex-none">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
       </div>
 
       <!-- ABAS DOS ANDARES ESTILO NAVEGADOR COM BOTÃO + -->
@@ -165,7 +170,7 @@
         </div>
       </div>
 
-      <!-- LISTA DE PASTAS DO ANDAR SELECIONADO (ORDENADAS ALFABETICAMENTE) -->
+      <!-- LISTA DE PASTAS DO ANDAR SELECIONADO -->
       <div id="sectors-list" class="grid grid-cols-1 gap-3"></div>
     </section>
 
@@ -177,7 +182,6 @@
           <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registadas</p>
         </div>
         <div class="flex items-center gap-2">
-          <!-- BOTÃO PARA REORGANIZAR/ATUALIZAR OS TICKETS DESTE SETOR -->
           <button onclick="reorganizeSectorTickets()" title="Organizar tickets sequencialmente" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
             <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Organizar Tickets</span>
           </button>
@@ -187,7 +191,7 @@
         </div>
       </div>
 
-      <!-- BARRA DE FILTROS DE ESTADO E ORDENAÇÃO ALFABÉTICA/TICKET -->
+      <!-- BARRA DE FILTROS DE ESTADO E ORDENAÇÃO -->
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
         <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
           <button onclick="filterMachinesByStatus('Todos')" id="filter-btn-Todos" class="px-3 py-1.5 rounded-lg font-semibold bg-blue-600 text-white shadow-sm whitespace-nowrap">Todos</button>
@@ -196,7 +200,6 @@
           <button onclick="filterMachinesByStatus('Defeito')" id="filter-btn-Defeito" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Defeito</button>
         </div>
 
-        <!-- FILTRO DE ORDENAÇÃO (ALFABÉTICA / TICKET / RECENTES) -->
         <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs shadow-sm">
           <i class="fa-solid fa-arrow-down-wide-short text-slate-400"></i>
           <span class="text-slate-500 font-semibold">Ordenar:</span>
@@ -270,7 +273,7 @@
     </button>
   </nav>
 
-  <!-- MODAL: POP-UP DE RELATÓRIO DE SINCRONIZAÇÃO COMPLETO -->
+  <!-- MODAL: RELATÓRIO DE SINCRONIZAÇÃO -->
   <div id="modal-sync-report" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-purple-50 flex-none">
@@ -284,7 +287,6 @@
           <p id="sync-report-date" class="text-[11px] text-slate-500 mt-0.5"></p>
         </div>
 
-        <!-- BLOCOS DE ESTATÍSTICAS DO SYNC -->
         <div class="grid grid-cols-3 gap-2 text-center">
           <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
             <span class="block text-[10px] text-emerald-600 font-bold uppercase">Enviados (Novos)</span>
@@ -300,7 +302,6 @@
           </div>
         </div>
 
-        <!-- LISTAGEM DETALHADA DOS ITENS -->
         <div class="space-y-2">
           <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Detalhes dos Registos Analisados:</span>
           <div id="sync-details-container" class="space-y-1.5 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-52 overflow-y-auto font-mono text-[11px]"></div>
@@ -327,9 +328,7 @@
         <input type="hidden" id="folder-id">
         <div>
           <label class="block font-semibold text-slate-600 mb-1">Andar de Destino (Mover Pasta)</label>
-          <select id="folder-floor-id" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-indigo-900">
-            <!-- Gerado dinamicamente -->
-          </select>
+          <select id="folder-floor-id" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-indigo-900"></select>
         </div>
         <div>
           <label class="block font-semibold text-slate-600 mb-1">Nome do Setor / Pasta</label>
@@ -385,10 +384,6 @@
       </div>
 
       <div id="printable-ticket" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
-        <div id="detail-photo-container" class="hidden text-center">
-          <img id="detail-photo" onclick="openImageView(this.src, 'Equipamento')" class="w-full h-48 object-cover rounded-xl border shadow-sm cursor-pointer hover:opacity-95 transition">
-          <span class="text-[10px] text-slate-400 mt-1 block">Toque na foto para ampliar</span>
-        </div>
         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
           <div class="flex justify-between border-b pb-1.5">
             <span class="text-slate-500 font-semibold">Nº do Ticket / O.S:</span>
@@ -485,7 +480,6 @@
       <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
         <input type="hidden" id="edit-machine-id">
 
-        <!-- ETIQUETA / GABINETE / PATRIMÓNIO -->
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Gabinete / Património</label>
           <div class="flex gap-2">
@@ -496,7 +490,6 @@
           </div>
         </div>
 
-        <!-- ETIQUETA / MONITOR / PATRIMÓNIO -->
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Etiqueta / Monitor / Património</label>
           <div class="flex gap-2">
@@ -511,19 +504,6 @@
         <div id="scanner-container" class="hidden border-2 border-dashed border-blue-400 p-2 rounded-xl bg-slate-50 relative">
           <div id="reader" class="w-full"></div>
           <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-red-100 text-red-600 text-xs font-bold py-1.5 rounded-lg">Fechar Leitor</button>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Foto da Etiqueta / Equipamento</label>
-          <label class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg p-3 text-center cursor-pointer text-slate-700 text-xs font-semibold flex items-center justify-center gap-2">
-            <i class="fa-solid fa-camera text-blue-600 text-base"></i>
-            <span id="photo-label-text">Tirar ou Anexar Foto</span>
-            <input type="file" id="machine-photo" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden">
-          </label>
-          <div id="photo-preview-container" class="mt-2 hidden relative">
-            <img id="photo-preview" class="w-full h-36 object-cover rounded-lg border border-slate-200 shadow-inner">
-            <button type="button" onclick="removeCapturedPhoto()" class="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full text-xs shadow-md"><i class="fa-solid fa-trash"></i></button>
-          </div>
         </div>
 
         <div>
@@ -561,7 +541,6 @@
           </select>
         </div>
 
-        <!-- PERIFÉRICOS DO CONJUNTO -->
         <div>
           <div class="flex justify-between items-center mb-1.5">
             <label class="block text-xs font-semibold text-slate-600"><i class="fa-solid fa-boxes-stacked text-blue-600 mr-1"></i> Periféricos do Conjunto</label>
@@ -583,17 +562,6 @@
           <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar no Servidor</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- MODAL: VIEW PHOTO FULLSCREEN -->
-  <div id="modal-image-view" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col justify-between p-4" onclick="closeImageView()">
-    <div class="flex justify-between items-center text-white">
-      <span id="image-modal-title" class="text-xs font-medium">Foto do Equipamento</span>
-      <button onclick="closeImageView()" class="text-white text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="flex-1 flex items-center justify-center p-2">
-      <img id="full-size-image" class="max-h-[80vh] max-w-full object-contain rounded-lg">
     </div>
   </div>
 
@@ -620,18 +588,14 @@
     let currentFloorId = null;
     let currentSectorId = null;
     let currentFilterStatus = 'Todos';
-    let currentMachineSort = 'ticket'; // Opções: 'ticket', 'alphabetical', 'recent'
-    let currentBase64Photo = null;
+    let currentMachineSort = 'ticket';
     let html5QrcodeScanner = null;
     let activeScannerTarget = 'code';
     let currentUser = null;
 
-    // Registar o Service Worker para suporte PWA Offline
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registado:', reg.scope))
-          .catch(err => console.error('Erro ao registar Service Worker:', err));
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
 
@@ -783,7 +747,6 @@
       }).subscribe();
     }
 
-    // FUNÇÃO DE SINCRONIZAÇÃO COMPLETA COM POP-UP DE RELATÓRIO
     async function forceSyncWithGoogleSheets() {
       if (!navigator.onLine) { alert("⚠️ Encontra-se offline."); return; }
       if (!machines || machines.length === 0) { alert("⚠️ Não existem máquinas para sincronizar."); return; }
@@ -814,7 +777,6 @@
           const floorName = floor ? floor.name.toUpperCase() : 'GERAL';
           const sectorName = sec ? sec.name.toUpperCase() : 'GERAL';
 
-          // Verificar inconsistências (ex: sem código de património ou sem setor)
           if (!codeTrim || codeTrim === '' || !m.sector_id) {
             inconsistentItemsFound.push({
               code: codeTrim || 'SEM CÓDIGO',
@@ -825,7 +787,6 @@
             return;
           }
 
-          // Verificar duplicatas na planilha pelo código de patrimônio
           if (existingCodesInSheet.includes(codeTrim.toLowerCase())) {
             duplicateItemsFound.push({
               code: codeTrim,
@@ -850,7 +811,6 @@
           }
         });
 
-        // Enviar os novos registos válidos e não duplicados
         if (newItemsToSend.length > 0) {
           await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
             method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
@@ -858,7 +818,6 @@
           });
         }
 
-        // Exibir o Pop-up de Relatório Completo
         showSyncReportModal({
           sentCount: newItemsToSend.length,
           duplicates: duplicateItemsFound,
@@ -886,7 +845,7 @@
         container.innerHTML = `<div class="text-center text-slate-400 py-2">Nenhum registo processado.</div>`;
       }
 
-      reportData.duplicates.forEach((item, idx) => {
+      reportData.duplicates.forEach((item) => {
         container.innerHTML += `
           <div class="bg-amber-50 p-2 rounded border border-amber-200 flex justify-between items-center text-xs">
             <div>
@@ -898,7 +857,7 @@
         `;
       });
 
-      reportData.inconsistencies.forEach((item, idx) => {
+      reportData.inconsistencies.forEach((item) => {
         container.innerHTML += `
           <div class="bg-red-50 p-2 rounded border border-red-200 flex justify-between items-center text-xs">
             <div>
@@ -942,7 +901,6 @@
       if (foundUser) {
         currentUser = foundUser;
         sessionStorage.setItem('reg_current_user', JSON.stringify(currentUser));
-
         errorBox.classList.add('hidden');
         document.getElementById('view-login').classList.add('hidden');
         initApp();
@@ -963,10 +921,7 @@
     }
 
     async function loadDataFromServer() {
-      if (!supabaseClient) {
-        alert("Erro: Cliente Supabase não encontrado.");
-        return;
-      }
+      if (!supabaseClient) return;
       try {
         const [floorRes, secRes, macRes, usrRes] = await Promise.all([
           supabaseClient.from('floors').select('*'),
@@ -1000,8 +955,14 @@
 
         renderFloorsAndSectors();
         if (currentSectorId) renderMachines();
+        
+        // Se a barra de pesquisa global tiver texto, atualiza a pesquisa automaticamente
+        const searchInput = document.getElementById('global-search');
+        if (searchInput && searchInput.value.trim()) {
+          handleGlobalSearch(searchInput.value);
+        }
       } catch (err) {
-        alert("⚠️ Erro ao carregar dados do servidor:\n" + err.message);
+        console.error(err);
       }
     }
 
@@ -1012,7 +973,6 @@
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
     }
 
-    // REORGANIZAR E ATUALIZAR TICKETS DO SETOR ATUAL
     async function reorganizeSectorTickets() {
       if (!currentSectorId) return;
       const sec = sectors.find(s => s.id === currentSectorId);
@@ -1024,7 +984,6 @@
 
       const prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
       let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
-      
       sectorMachines.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
       let updatedCount = 0;
@@ -1043,7 +1002,6 @@
       renderMachines();
     }
 
-    // FILTRAGEM AO CLICAR NOS BLOCOS DE ESTATÍSTICAS DO TOPO
     function filtrarPorEstado(statusDesejado) {
       if (statusDesejado === 'Todos') {
         currentFilterStatus = 'Todos';
@@ -1062,13 +1020,11 @@
       }
     }
 
-    // ALTERAR TIPO DE ORDENAÇÃO DE MÁQUINAS NA TELA DE ITENS
     function handleMachineSortChange(sortType) {
       currentMachineSort = sortType;
       renderMachines();
     }
 
-    // MOVER MÁQUINA PARA OUTRO SETOR / PASTA
     async function openMoveMachineModal(machineId) {
       const m = machines.find(item => item.id === machineId);
       if (!m) return;
@@ -1088,7 +1044,6 @@
       }
 
       const targetSector = sectors[idxNum - 1];
-
       const targetSecMachines = machines.filter(item => item.sector_id === targetSector.id);
       let maxNum = 0;
       targetSecMachines.forEach(item => {
@@ -1151,12 +1106,10 @@
         card.className = "bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 cursor-pointer hover:border-blue-300 transition-all";
         card.onclick = () => openMachineDetails(m.id);
 
-        let photoHtml = m.photo_url ? `<img src="${m.photo_url}" class="w-14 h-14 rounded-lg object-cover flex-none border shadow-sm">` : `<div class="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300 flex-none"><i class="fa-solid fa-desktop"></i></div>`;
         const perfText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum periférico';
 
         card.innerHTML = `
           <div class="flex items-start gap-3">
-            ${photoHtml}
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
                 <span class="font-mono font-bold text-blue-700 text-sm">Gab: ${m.code}</span>
@@ -1164,7 +1117,16 @@
               </div>
               ${m.monitor ? `<p class="text-[11px] font-mono text-emerald-700 font-semibold">Mon: ${m.monitor}</p>` : ''}
               <p class="text-xs font-medium text-slate-800 mt-0.5">${m.model || 'Sem modelo'} <span class="text-blue-600 font-semibold">(${locationStr})</span></p>
+              ${m.ticket ? `<p class="text-[10px] font-mono text-purple-600 mt-0.5"><i class="fa-solid fa-ticket mr-1"></i> Ticket: ${m.ticket}</p>` : ''}
               <p class="text-[11px] text-blue-600 mt-0.5 font-medium"><i class="fa-solid fa-puzzle-piece mr-1"></i> ${perfText}</p>
+            </div>
+          </div>
+          <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
+            <span>${m.date || ''}</span>
+            <div class="flex items-center gap-3">
+              <button onclick="event.stopPropagation(); openMoveMachineModal('${m.id}')" class="text-indigo-600 font-semibold hover:text-indigo-800 flex items-center gap-1"><i class="fa-solid fa-folder-arrow-right"></i> Mover</button>
+              <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
+              <button onclick="event.stopPropagation(); deleteMachine('${m.id}')" class="text-red-500 font-medium hover:text-red-700 flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
             </div>
           </div>
         `;
@@ -1334,8 +1296,6 @@
 
       sortedFloors.forEach(f => {
         const isCurrent = f.id === currentFloorId;
-        
-        // CALCULA O TOTAL DE MÁQUINAS DESTE ANDAR
         const floorSectorIds = sectors.filter(s => s.floor_id === f.id).map(s => s.id);
         const floorMachineCount = machines.filter(m => floorSectorIds.includes(m.sector_id)).length;
 
@@ -1364,7 +1324,6 @@
       }
 
       const floorSectors = sectors.filter(s => s.floor_id === currentFloorId);
-      // PASTAS EM ORDEM ALFABÉTICA RIGOROSA
       const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       if (sortedSectors.length === 0) {
@@ -1514,7 +1473,6 @@
       
       let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
       
-      // FILTRO POR ESTADO
       if(currentFilterStatus === 'Ativos') {
         sectorMachines = sectorMachines.filter(m => m.status === 'Operacional' || m.status === 'Novo');
       } else if(currentFilterStatus === 'Manutenção') {
@@ -1523,13 +1481,11 @@
         sectorMachines = sectorMachines.filter(m => m.status === 'Defeito');
       }
 
-      // ORDENAÇÃO (TICKET / ALFABÉTICA / RECENTES)
       if (currentMachineSort === 'alphabetical') {
         sectorMachines.sort((a, b) => String(a.code || '').localeCompare(String(b.code || ''), 'pt-BR', { sensitivity: 'accent' }));
       } else if (currentMachineSort === 'recent') {
         sectorMachines.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       } else {
-        // Padrão: Ordem por Ticket (ex: TICKET-001, TICKET-002...)
         sectorMachines.sort((a, b) => {
           const tA = a.ticket || '';
           const tB = b.ticket || '';
@@ -1549,12 +1505,10 @@
         card.className = "bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2 cursor-pointer hover:border-blue-300 transition-all";
         card.onclick = () => openMachineDetails(m.id);
 
-        let photoHtml = m.photo_url ? `<img src="${m.photo_url}" class="w-14 h-14 rounded-lg object-cover flex-none border shadow-sm">` : `<div class="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300 flex-none"><i class="fa-solid fa-desktop"></i></div>`;
         const perfText = m.peripherals && m.peripherals.length > 0 ? m.peripherals.join(', ') : 'Nenhum periférico';
         
         card.innerHTML = `
           <div class="flex items-start gap-3">
-            ${photoHtml}
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
                 <span class="font-mono font-bold text-blue-700 text-sm">Gab: ${m.code}</span>
@@ -1569,7 +1523,7 @@
             </div>
           </div>
           <div class="flex items-center justify-between border-t pt-2 text-[11px] text-slate-400">
-            <span>${m.date}</span>
+            <span>${m.date || ''}</span>
             <div class="flex items-center gap-3">
               <button onclick="event.stopPropagation(); openMoveMachineModal('${m.id}')" class="text-indigo-600 font-semibold hover:text-indigo-800 flex items-center gap-1"><i class="fa-solid fa-folder-arrow-right"></i> Mover</button>
               <button onclick="event.stopPropagation(); editMachine('${m.id}')" class="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1"><i class="fa-solid fa-pen"></i> Editar</button>
@@ -1598,12 +1552,6 @@
       document.getElementById('detail-peripherals').innerText = m.peripherals ? m.peripherals.join(', ') : 'Nenhum';
       document.getElementById('detail-date').innerText = m.date || '-';
       document.getElementById('detail-notes').innerText = m.notes || 'Nenhuma observação.';
-      
-      const photoContainer = document.getElementById('detail-photo-container');
-      if (m.photo_url) {
-        document.getElementById('detail-photo').src = m.photo_url;
-        photoContainer.classList.remove('hidden');
-      } else { photoContainer.classList.add('hidden'); }
       document.getElementById('modal-machine-details').classList.remove('hidden');
     }
 
@@ -1620,7 +1568,6 @@
       document.getElementById('machine-notes').value = '';
       renderPeripheralsCheckboxes([]);
       document.getElementById('modal-machine-title').innerText = 'Cadastrar Máquina';
-      removeCapturedPhoto();
       stopScanner();
       document.getElementById('modal-machine').classList.remove('hidden');
     }
@@ -1644,43 +1591,7 @@
       document.getElementById('machine-notes').value = m.notes || '';
       renderPeripheralsCheckboxes(m.peripherals || []);
       document.getElementById('modal-machine-title').innerText = 'Editar Máquina';
-      if (m.photo_url) {
-        currentBase64Photo = m.photo_url;
-        document.getElementById('photo-preview').src = m.photo_url;
-        document.getElementById('photo-preview-container').classList.remove('hidden');
-        document.getElementById('photo-label-text').innerText = 'Trocar Foto';
-      } else { removeCapturedPhoto(); }
       document.getElementById('modal-machine').classList.remove('hidden');
-    }
-
-    function handlePhotoUpload(e) {
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width, height = img.height;
-          if (width > 800) { height *= 800 / width; width = 800; }
-          canvas.width = width; canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          currentBase64Photo = canvas.toDataURL('image/jpeg', 0.7);
-          document.getElementById('photo-preview').src = currentBase64Photo;
-          document.getElementById('photo-preview-container').classList.remove('hidden');
-          document.getElementById('photo-label-text').innerText = 'Trocar Foto';
-        };
-        img.src = evt.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function removeCapturedPhoto() {
-      currentBase64Photo = null;
-      document.getElementById('machine-photo').value = '';
-      document.getElementById('photo-preview').src = '';
-      document.getElementById('photo-preview-container').classList.add('hidden');
-      document.getElementById('photo-label-text').innerText = 'Tirar ou Anexar Foto';
     }
 
     function startScanner(target) {
@@ -1796,7 +1707,6 @@
 
       if(!code) return;
 
-      // === VALIDAÇÃO DE DUPLICIDADE DE GABINETE ===
       const normalizedCode = code.toLowerCase();
       const existingMachine = machines.find(m => {
         if (editId && m.id === editId) return false;
@@ -1808,25 +1718,22 @@
         document.getElementById('machine-code').focus();
         return; 
       }
-      // ===========================================
 
       const sec = sectors.find(s => s.id === currentSectorId);
       const now = new Date();
       const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
       if (editId) {
-        const { error } = await supabaseClient.from('machines').update({ code, monitor, model, os, status, peripherals, notes, photo_url: currentBase64Photo }).eq('id', editId);
+        const { error } = await supabaseClient.from('machines').update({ code, monitor, model, os, status, peripherals, notes }).eq('id', editId);
         if (error) { alert("Erro ao atualizar máquina: " + error.message); return; }
 
         const m = machines.find(item => item.id === editId);
         if(m) {
           m.code = code; m.monitor = monitor; m.model = model; m.os = os; m.status = status;
           m.peripherals = peripherals; m.notes = notes;
-          if(currentBase64Photo) m.photo_url = currentBase64Photo;
         }
       } else {
         const prefix = sec ? sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) : "GER";
-        
         const sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
         let maxNumber = 0;
         
@@ -1844,7 +1751,7 @@
 
         const newMachine = {
           id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
-          photo_url: currentBase64Photo, date: dateStr, timestamp: Date.now()
+          date: dateStr, timestamp: Date.now()
         };
 
         const { error } = await supabaseClient.from('machines').insert([newMachine]);
@@ -1854,7 +1761,11 @@
       }
 
       closeMachineModal();
-      openSectorItems(currentSectorId);
+      if (currentSectorId) {
+        openSectorItems(currentSectorId);
+      } else {
+        renderFloorsAndSectors();
+      }
     }
 
     async function deleteMachine(id) {
@@ -1862,17 +1773,21 @@
         const { error } = await supabaseClient.from('machines').delete().eq('id', id);
         if (error) { alert("Erro ao excluir máquina: " + error.message); return; }
 
+        // Remove imediatamente da lista local e atualiza a interface
         machines = machines.filter(m => m.id !== id);
-        openSectorItems(currentSectorId);
+        
+        if (currentSectorId) {
+          renderMachines();
+        } else {
+          renderFloorsAndSectors();
+          const searchInput = document.getElementById('global-search');
+          if (searchInput && searchInput.value.trim()) {
+            handleGlobalSearch(searchInput.value);
+          }
+        }
+        updateDashboardStats();
       }
     }
-
-    function openImageView(src, title) {
-      document.getElementById('full-size-image').src = src;
-      document.getElementById('image-modal-title').innerText = title;
-      document.getElementById('modal-image-view').classList.remove('hidden');
-    }
-    function closeImageView() { document.getElementById('modal-image-view').classList.add('hidden'); }
 
     function openExportModal() {
       if (sectors.length === 0) { alert("Não existem setores."); return; }
