@@ -40,7 +40,7 @@
 
   <!-- INDICADOR DE ESTADO DE CONEXÃO -->
   <div id="offline-banner" class="hidden bg-amber-500 text-white text-[11px] font-semibold text-center py-1 px-2 flex items-center justify-center gap-1.5 flex-none z-30 shadow-inner">
-    <i class="fa-solid fa-triangle-exclamation"></i> Encontra-se offline. As alterações serão salvas localmente e sincronizadas quando a ligação foi restabelecida.
+    <i class="fa-solid fa-triangle-exclamation"></i> Encontra-se offline. As alterações serão salvas localmente e sincronizadas quando a ligação for restabelecida.
   </div>
 
   <!-- LOGIN VIEW -->
@@ -179,8 +179,8 @@
           <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registadas</p>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="reorganizeSectorTickets()" title="Organizar tickets sequencialmente" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Organizar Tickets</span>
+          <button onclick="reorganizeSectorTickets()" title="Recalcular tickets com base no Gabinete" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Recalcular Tickets</span>
           </button>
           <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
             <i class="fa-solid fa-plus"></i> Cadastrar
@@ -200,7 +200,7 @@
           <i class="fa-solid fa-arrow-down-wide-short text-slate-400"></i>
           <span class="text-slate-500 font-semibold">Ordenar:</span>
           <select id="machine-sort-select" onchange="handleMachineSortChange(this.value)" class="bg-transparent font-bold text-blue-700 focus:outline-none cursor-pointer">
-            <option value="ticket">Ticket (Sequencial)</option>
+            <option value="ticket">Ticket (5ª à 10ª casa)</option>
             <option value="alphabetical">Alfabética (Gabinete)</option>
             <option value="recent">Mais Recentes</option>
           </select>
@@ -277,10 +277,10 @@
       </div>
       <h3 class="font-bold text-slate-800 text-sm">Não encontrou a etiqueta no gabinete?</h3>
       <p class="text-xs text-slate-600 leading-relaxed">
-        Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize esse código no cadastro[cite: 7].
+        Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize esses 12 dígitos no cadastro[cite: 7].
       </p>
       <button type="button" onclick="closeHostHintModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow">
-        Entendido, obrigado!
+        Entendido!
       </button>
     </div>
   </div>
@@ -492,22 +492,22 @@
       <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
         <input type="hidden" id="edit-machine-id">
 
-        <!-- GABINETE COM POP-UP / DICA DE HOST NAME -->
+        <!-- GABINETE COM MENSAGEM DE 12 DÍGITOS E POP-UP -->
         <div>
           <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Gabinete / Património *</label>
+            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Gabinete (12 Dígitos) *</label>
             <div class="flex gap-2">
               <button type="button" onclick="openHostHintModal()" class="text-[11px] text-blue-600 font-bold hover:underline">💡 Onde achar o Host Name?</button>
               <button type="button" onclick="setNotApplicable('machine-code')" class="text-[11px] text-amber-600 font-bold hover:underline">⚠️ N/A</button>
             </div>
           </div>
           <div class="flex gap-2">
-            <input type="text" id="machine-code" placeholder="Digite a etiqueta ou o Host Name..." class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
+            <input type="text" id="machine-code" maxlength="12" placeholder="Ex: 991017251100 (12 dígitos)" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
             <button type="button" onclick="startScanner('code')" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
               <i class="fa-solid fa-barcode text-sm"></i> Ler
             </button>
           </div>
-          <p class="text-[10px] text-slate-400 mt-1">Dica: Se não ver etiqueta no gabinete, verifique o <strong>Host Name</strong> na área de trabalho[cite: 7].</p>
+          <p class="text-[10px] text-slate-500 mt-1">O ticket será gerado automaticamente pegando da 5ª à 10ª casa[cite: 7].</p>
         </div>
 
         <!-- MONITOR -->
@@ -650,6 +650,21 @@
       document.getElementById('view-login').classList.add('hidden');
     };
 
+    // Função utilitária para gerar o Ticket extraindo da 5ª à 10ª casa
+    function generateTicketFromCode(code) {
+      const cleanCode = String(code || '').trim();
+      if (cleanCode.toUpperCase() === 'NÃO SE APLICA' || cleanCode.toUpperCase() === 'NAO SE APLICA') {
+        const naCount = machines.filter(m => m.ticket && m.ticket.startsWith('NA-')).length;
+        return `NA-${String(naCount + 1).padStart(3, '0')}`;
+      }
+      
+      // Se tiver pelo menos 10 dígitos, extrai do caractere 4 ao 9 (5ª à 10ª casa)
+      if (cleanCode.length >= 10) {
+        return cleanCode.substring(4, 10);
+      }
+      return cleanCode;
+    }
+
     function loadCustomPeripheralsFromStorage() {
       try {
         const saved = JSON.parse(localStorage.getItem('reg_custom_peripherals') || '[]');
@@ -761,7 +776,6 @@
       document.getElementById(elementId).value = "NÃO SE APLICA";
     }
 
-    // Funções do Modal Pop-up de Dica do Host Name
     function openHostHintModal() {
       document.getElementById('modal-host-hint').classList.remove('hidden');
     }
@@ -1017,18 +1031,16 @@
       const sec = sectors.find(s => s.id === currentSectorId);
       if (!sec) return;
 
-      if (!confirm(`Deseja reorganizar sequencialmente todos os tickets do setor "${sec.name}"?\nIsso corrigirá eventuais saltos e numerará as máquinas de 001 em diante por ordem cronológica.`)) {
+      if (!confirm(`Deseja recalcular todos os tickets do setor "${sec.name}" com base na nova regra (extraindo a 5ª à 10ª casa do Gabinete)?`)) {
         return;
       }
 
-      const prefix = sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
       let sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
-      sectorMachines.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
       let updatedCount = 0;
+
       for (let i = 0; i < sectorMachines.length; i++) {
         const m = sectorMachines[i];
-        const newTicket = `${prefix}-${String(i + 1).padStart(3, '0')}`;
+        const newTicket = generateTicketFromCode(m.code);
         
         if (m.ticket !== newTicket) {
           m.ticket = newTicket;
@@ -1037,7 +1049,7 @@
         }
       }
 
-      alert(`✅ Reorganização concluída!\n${updatedCount} tickets foram atualizados sem saltos no setor ${sec.name}.`);
+      alert(`✅ Recálculo concluído!\n${updatedCount} tickets foram atualizados para o novo padrão.`);
       renderMachines();
     }
 
@@ -1083,24 +1095,14 @@
       }
 
       const targetSector = sectors[idxNum - 1];
-      const targetSecMachines = machines.filter(item => item.sector_id === targetSector.id);
-      let maxNum = 0;
-      targetSecMachines.forEach(item => {
-        if (item.ticket && item.ticket.includes('-')) {
-          const parts = item.ticket.split('-');
-          const num = parseInt(parts[parts.length - 1], 10);
-          if (!isNaN(num) && num > maxNum) maxNum = num;
-        }
-      });
-      const prefix = targetSector.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
-      const newTicket = `${prefix}-${String(maxNum + 1).padStart(3, '0')}`;
+      const newTicket = generateTicketFromCode(m.code);
 
       const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id, ticket: newTicket }).eq('id', machineId);
       if (error) { alert("Erro ao mover máquina no servidor: " + error.message); return; }
 
       m.sector_id = targetSector.id;
       m.ticket = newTicket;
-      alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name} (Novo Ticket: ${newTicket})`);
+      alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name} (Ticket: ${newTicket})`);
       renderFloorsAndSectors();
       if (currentSectorId) renderMachines();
     }
@@ -1696,17 +1698,7 @@
             const now = new Date();
             const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             
-            const sectorMachines = machines.filter(m => m.sector_id === sectorId);
-            let maxNumber = 0;
-            sectorMachines.forEach(m => {
-              if (m.ticket && m.ticket.includes('-')) {
-                const parts = m.ticket.split('-');
-                const num = parseInt(parts[parts.length - 1], 10);
-                if (!isNaN(num) && num > maxNumber) maxNumber = num;
-              }
-            });
-            const prefix = sectorNameRaw.replace(/[^A-Z0-9]/g, '').slice(0, 4) || "GER";
-            const ticket = `${prefix}-${String(maxNumber + 1).padStart(3, '0')}`;
+            const ticket = generateTicketFromCode(code);
 
             const newMachine = {
               id: 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -1733,7 +1725,7 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // === VALIDAÇÃO RESTRITA DE CADASTRO DE MÁQUINAS ===
+    // === VALIDAÇÃO RESTRITA DE CADASTRO COM NOVA REGRA DE TICKET (12 DÍGITOS) ===
     async function saveMachine(e) {
       e.preventDefault();
       const editId = document.getElementById('edit-machine-id').value;
@@ -1746,23 +1738,34 @@
       const peripherals = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
 
       if (!code) {
-        alert("⚠️ Campo em falta: 'Etiqueta / Gabinete / Património'. Se não encontrar a etiqueta física, verifique o Host Name na área de trabalho da máquina[cite: 7] ou clique em 'N/A'.");
+        alert("⚠️ Campo em falta: 'Etiqueta / Gabinete'. Se não encontrar a etiqueta física, verifique o Host Name na área de trabalho da máquina[cite: 7] ou clique em 'N/A'.");
         document.getElementById('machine-code').focus();
         return;
       }
+
+      // Validação estrita dos 12 dígitos para o Gabinete
+      const isNotApp = code.toUpperCase() === 'NÃO SE APLICA' || code.toUpperCase() === 'NAO SE APLICA';
+      if (!isNotApp) {
+        if (code.length !== 12 || !/^\d+$/.test(code)) {
+          alert("⚠️ O número de cadastro do Gabinete deve possuir EXATAMENTE 12 DÍGITOS numéricos (Ex: 991017251100).");
+          document.getElementById('machine-code').focus();
+          return;
+        }
+      }
+
       if (/^0+$/.test(code)) {
-        alert("⚠️ O campo 'Etiqueta / Gabinete / Património' não pode conter apenas zeros (00000).");
+        alert("⚠️ O campo 'Etiqueta / Gabinete' não pode conter apenas zeros (00000).");
         document.getElementById('machine-code').focus();
         return;
       }
 
       if (!monitor) {
-        alert("⚠️ Campo em falta: 'Etiqueta / Monitor / Património'. Por favor, preencha ou clique em 'Não se aplica'.");
+        alert("⚠️ Campo em falta: 'Etiqueta / Monitor'. Por favor, preencha ou clique em 'Não se aplica'.");
         document.getElementById('machine-monitor').focus();
         return;
       }
       if (/^0+$/.test(monitor)) {
-        alert("⚠️ O campo 'Etiqueta / Monitor / Património' não pode conter apenas zeros (00000).");
+        alert("⚠️ O campo 'Etiqueta / Monitor' não pode conter apenas zeros (00000).");
         document.getElementById('machine-monitor').focus();
         return;
       }
@@ -1793,7 +1796,7 @@
       const normalizedCode = code.toLowerCase();
       const existingMachine = machines.find(m => {
         if (editId && m.id === editId) return false;
-        return String(m.code || '').trim().toLowerCase() === normalizedCode;
+        return String(m.code || '').trim().toLowerCase() === normalizedCode && !isNotApp;
       });
 
       if (existingMachine) {
@@ -1802,36 +1805,23 @@
         return; 
       }
 
+      // GERAR TICKET EXTRAINDO DA 5ª À 10ª CASA (EX: 991017251100 -> 172511)
+      const ticket = generateTicketFromCode(code);
+
       const sec = sectors.find(s => s.id === currentSectorId);
       const now = new Date();
       const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
       if (editId) {
-        const { error } = await supabaseClient.from('machines').update({ code, monitor, model, os, status, peripherals, notes }).eq('id', editId);
+        const { error } = await supabaseClient.from('machines').update({ ticket, code, monitor, model, os, status, peripherals, notes }).eq('id', editId);
         if (error) { alert("Erro ao atualizar máquina: " + error.message); return; }
 
         const m = machines.find(item => item.id === editId);
         if(m) {
-          m.code = code; m.monitor = monitor; m.model = model; m.os = os; m.status = status;
+          m.ticket = ticket; m.code = code; m.monitor = monitor; m.model = model; m.os = os; m.status = status;
           m.peripherals = peripherals; m.notes = notes;
         }
       } else {
-        const prefix = sec ? sec.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) : "GER";
-        const sectorMachines = machines.filter(m => m.sector_id === currentSectorId);
-        let maxNumber = 0;
-        
-        sectorMachines.forEach(m => {
-          if (m.ticket && m.ticket.includes('-')) {
-            const parts = m.ticket.split('-');
-            const num = parseInt(parts[parts.length - 1], 10);
-            if (!isNaN(num) && num > maxNumber) {
-              maxNumber = num;
-            }
-          }
-        });
-
-        const ticket = `${prefix}-${String(maxNumber + 1).padStart(3, '0')}`;
-
         const newMachine = {
           id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
           date: dateStr, timestamp: Date.now()
@@ -1898,7 +1888,7 @@
         const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
         fileContent += `${floor ? floor.name.toUpperCase() : 'GERAL'}\t${sec ? sec.name.toUpperCase() : 'GERAL'}\t${m.ticket}\t${m.code || ''}\t${m.monitor || ''}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
       });
-      const blob = new Blob([fileContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+      const blob = new Blob([fileContent], { type: 'tab-separated-values;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `InfraGest_Relatorio_${new Date().toISOString().slice(0, 10)}.xls`;
