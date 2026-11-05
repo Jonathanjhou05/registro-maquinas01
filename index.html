@@ -179,8 +179,8 @@
           <p id="current-sector-count" class="text-xs text-slate-500">0 máquinas registadas</p>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="reorganizeSectorTickets()" title="Recalcular tickets com base no Gabinete" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Recalcular Tickets</span>
+          <button onclick="reorganizeSectorTickets()" title="Recalcular tickets e limpar caracteres" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-2.5 py-2 rounded-lg flex items-center gap-1 shadow">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Corrigir & Recalcular</span>
           </button>
           <button onclick="openMachineModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 shadow">
             <i class="fa-solid fa-plus"></i> Cadastrar
@@ -277,7 +277,7 @@
       </div>
       <h3 class="font-bold text-slate-800 text-sm">Não encontrou a etiqueta no gabinete?</h3>
       <p class="text-xs text-slate-600 leading-relaxed">
-        Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize esses 12 dígitos no cadastro[cite: 7].
+        Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize somente os 12 números correspondentes no cadastro[cite: 7].
       </p>
       <button type="button" onclick="closeHostHintModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow">
         Entendido!
@@ -492,32 +492,32 @@
       <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
         <input type="hidden" id="edit-machine-id">
 
-        <!-- GABINETE COM MENSAGEM DE 12 DÍGITOS E POP-UP -->
+        <!-- GABINETE (APENAS NÚMEROS E 12 DÍGITOS) -->
         <div>
           <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Gabinete (12 Dígitos) *</label>
+            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Gabinete (Apenas Números - 12 Dígitos) *</label>
             <div class="flex gap-2">
               <button type="button" onclick="openHostHintModal()" class="text-[11px] text-blue-600 font-bold hover:underline">💡 Onde achar o Host Name?</button>
               <button type="button" onclick="setNotApplicable('machine-code')" class="text-[11px] text-amber-600 font-bold hover:underline">⚠️ N/A</button>
             </div>
           </div>
           <div class="flex gap-2">
-            <input type="text" id="machine-code" maxlength="12" placeholder="Ex: 991017251100 (12 dígitos)" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
+            <input type="text" id="machine-code" maxlength="12" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')" placeholder="Ex: 991017251100" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
             <button type="button" onclick="startScanner('code')" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
               <i class="fa-solid fa-barcode text-sm"></i> Ler
             </button>
           </div>
-          <p class="text-[10px] text-slate-500 mt-1">O ticket será gerado automaticamente pegando da 5ª à 10ª casa[cite: 7].</p>
+          <p class="text-[10px] text-slate-500 mt-1">Apenas números permitidos. O ticket gerará da 5ª à 10ª casa[cite: 7].</p>
         </div>
 
-        <!-- MONITOR -->
+        <!-- MONITOR (APENAS NÚMEROS) -->
         <div>
           <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Monitor / Património *</label>
+            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Monitor (Apenas Números) *</label>
             <button type="button" onclick="setNotApplicable('machine-monitor')" class="text-[11px] text-amber-600 font-bold hover:underline">⚠️ Não se aplica</button>
           </div>
           <div class="flex gap-2">
-            <input type="text" id="machine-monitor" placeholder="Digite, escaneie ou marque Não se aplica" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-emerald-800">
+            <input type="text" id="machine-monitor" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')" placeholder="Digite apenas números ou N/A" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-emerald-800">
             <button type="button" onclick="startScanner('monitor')" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
               <i class="fa-solid fa-barcode text-sm"></i> Ler
             </button>
@@ -650,15 +650,22 @@
       document.getElementById('view-login').classList.add('hidden');
     };
 
-    // Função utilitária para gerar o Ticket extraindo da 5ª à 10ª casa
+    // Função para limpar caracteres especiais e manter apenas números
+    function cleanOnlyNumbers(str) {
+      if (!str) return '';
+      const upper = String(str).trim().toUpperCase();
+      if (upper === 'NÃO SE APLICA' || upper === 'NAO SE APLICA') return 'NÃO SE APLICA';
+      return String(str).replace(/\D/g, '');
+    }
+
     function generateTicketFromCode(code) {
-      const cleanCode = String(code || '').trim();
-      if (cleanCode.toUpperCase() === 'NÃO SE APLICA' || cleanCode.toUpperCase() === 'NAO SE APLICA') {
+      const cleanCode = cleanOnlyNumbers(code);
+      if (cleanCode === 'NÃO SE APLICA') {
         const naCount = machines.filter(m => m.ticket && m.ticket.startsWith('NA-')).length;
         return `NA-${String(naCount + 1).padStart(3, '0')}`;
       }
       
-      // Se tiver pelo menos 10 dígitos, extrai do caractere 4 ao 9 (5ª à 10ª casa)
+      // Extrai da 5ª à 10ª casa (índices 4 a 9)
       if (cleanCode.length >= 10) {
         return cleanCode.substring(4, 10);
       }
@@ -760,7 +767,7 @@
         const currentSelected = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
         currentSelected.push(formatted);
         renderPeripheralsCheckboxes(currentSelected);
-      } else { alert("Este periférico já existe."); }
+      } else { alert(" Este periférico já existe."); }
     }
 
     function removePeripheralItem(itemToRemove) {
@@ -1026,12 +1033,13 @@
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
     }
 
+    // Função para limpar e corrigir os cadastros antigos (removendo letras/caracteres especiais)
     async function reorganizeSectorTickets() {
       if (!currentSectorId) return;
       const sec = sectors.find(s => s.id === currentSectorId);
       if (!sec) return;
 
-      if (!confirm(`Deseja recalcular todos os tickets do setor "${sec.name}" com base na nova regra (extraindo a 5ª à 10ª casa do Gabinete)?`)) {
+      if (!confirm(`Deseja limpar letras e caracteres especiais dos gabinetes/monitores do setor "${sec.name}" e recalcular os tickets?`)) {
         return;
       }
 
@@ -1040,16 +1048,26 @@
 
       for (let i = 0; i < sectorMachines.length; i++) {
         const m = sectorMachines[i];
-        const newTicket = generateTicketFromCode(m.code);
+        const cleanedCode = cleanOnlyNumbers(m.code);
+        const cleanedMonitor = cleanOnlyNumbers(m.monitor);
+        const newTicket = generateTicketFromCode(cleanedCode);
         
-        if (m.ticket !== newTicket) {
+        if (m.code !== cleanedCode || m.monitor !== cleanedMonitor || m.ticket !== newTicket) {
+          m.code = cleanedCode;
+          m.monitor = cleanedMonitor;
           m.ticket = newTicket;
-          const { error } = await supabaseClient.from('machines').update({ ticket: newTicket }).eq('id', m.id);
+          
+          const { error } = await supabaseClient.from('machines').update({ 
+            code: cleanedCode, 
+            monitor: cleanedMonitor, 
+            ticket: newTicket 
+          }).eq('id', m.id);
+
           if (!error) updatedCount++;
         }
       }
 
-      alert(`✅ Recálculo concluído!\n${updatedCount} tickets foram atualizados para o novo padrão.`);
+      alert(`✅ Correção concluída!\n${updatedCount} registos foram limpos de caracteres especiais e recalculados no setor ${sec.name}.`);
       renderMachines();
     }
 
@@ -1642,10 +1660,11 @@
       try {
         html5QrcodeScanner = new Html5Qrcode("reader");
         html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 220 }, (text) => {
+          const cleanedText = cleanOnlyNumbers(text);
           if (activeScannerTarget === 'monitor') {
-            document.getElementById('machine-monitor').value = text;
+            document.getElementById('machine-monitor').value = cleanedText;
           } else {
-            document.getElementById('machine-code').value = text;
+            document.getElementById('machine-code').value = cleanedText;
           }
           stopScanner();
         }, () => {}).catch(() => stopScanner());
@@ -1672,8 +1691,8 @@
           let count = 0;
           for (const row of rows) {
             const sectorNameRaw = String(row['SETOR'] || row['Setor'] || 'GERAL').trim().toUpperCase();
-            const code = String(row['GABINETE'] || row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '').trim();
-            const monitor = String(row['MONITOR'] || row['Monitor'] || '').trim();
+            const code = cleanOnlyNumbers(row['GABINETE'] || row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '');
+            const monitor = cleanOnlyNumbers(row['MONITOR'] || row['Monitor'] || '');
             if (!code || !sectorNameRaw) continue;
 
             if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
@@ -1725,12 +1744,12 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // === VALIDAÇÃO RESTRITA DE CADASTRO COM NOVA REGRA DE TICKET (12 DÍGITOS) ===
+    // === VALIDAÇÃO RESTRITA: APENAS NÚMEROS E 12 DÍGITOS ===
     async function saveMachine(e) {
       e.preventDefault();
       const editId = document.getElementById('edit-machine-id').value;
-      const code = document.getElementById('machine-code').value.trim();
-      const monitor = document.getElementById('machine-monitor').value.trim();
+      const code = cleanOnlyNumbers(document.getElementById('machine-code').value);
+      const monitor = cleanOnlyNumbers(document.getElementById('machine-monitor').value);
       const model = document.getElementById('machine-model').value.trim();
       const os = document.getElementById('machine-os').value;
       const status = document.getElementById('machine-status').value;
@@ -1738,74 +1757,67 @@
       const peripherals = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
 
       if (!code) {
-        alert("⚠️ Campo em falta: 'Etiqueta / Gabinete'. Se não encontrar a etiqueta física, verifique o Host Name na área de trabalho da máquina[cite: 7] ou clique em 'N/A'.");
+        alert("⚠️ Campo em falta: 'Etiqueta / Gabinete'. Se não encontrar a etiqueta física, verifique o Host Name na área de trabalho ou clique em 'N/A'.");
         document.getElementById('machine-code').focus();
         return;
       }
 
-      // Validação estrita dos 12 dígitos para o Gabinete
-      const isNotApp = code.toUpperCase() === 'NÃO SE APLICA' || code.toUpperCase() === 'NAO SE APLICA';
+      const isNotApp = code === 'NÃO SE APLICA';
       if (!isNotApp) {
         if (code.length !== 12 || !/^\d+$/.test(code)) {
-          alert("⚠️ O número de cadastro do Gabinete deve possuir EXATAMENTE 12 DÍGITOS numéricos (Ex: 991017251100).");
+          alert("⚠️ O campo do Gabinete deve conter APENAS NÚMEROS e exatamente 12 dígitos (Ex: 991017251100). Letras e caracteres especiais não são permitidos.");
           document.getElementById('machine-code').focus();
           return;
         }
       }
 
       if (/^0+$/.test(code)) {
-        alert("⚠️ O campo 'Etiqueta / Gabinete' não pode conter apenas zeros (00000).");
+        alert("⚠️ O campo 'Etiqueta / Gabinete' não pode conter apenas zeros.");
         document.getElementById('machine-code').focus();
         return;
       }
 
       if (!monitor) {
-        alert("⚠️ Campo em falta: 'Etiqueta / Monitor'. Por favor, preencha ou clique em 'Não se aplica'.");
-        document.getElementById('machine-monitor').focus();
-        return;
-      }
-      if (/^0+$/.test(monitor)) {
-        alert("⚠️ O campo 'Etiqueta / Monitor' não pode conter apenas zeros (00000).");
+        alert("⚠️ Campo em falta: 'Etiqueta / Monitor'. Por favor, preencha com números ou clique em 'Não se aplica'.");
         document.getElementById('machine-monitor').focus();
         return;
       }
 
       if (!model) {
-        alert("⚠️ Campo em falta: 'Modelo / Tipo de Equipamento'. Por favor, selecione ou digite o modelo.");
+        alert("⚠️ Campo em falta: 'Modelo / Tipo de Equipamento'.");
         document.getElementById('machine-model').focus();
         return;
       }
 
       if (!os) {
-        alert("⚠️ Campo em falta: 'Sistema Operacional'. Por favor, selecione uma opção.");
+        alert("⚠️ Campo em falta: 'Sistema Operacional'.");
         document.getElementById('machine-os').focus();
         return;
       }
 
       if (!status) {
-        alert("⚠️ Campo em falta: 'Estado de Funcionamento'. Por favor, selecione o estado.");
+        alert("⚠️ Campo em falta: 'Estado de Funcionamento'.");
         document.getElementById('machine-status').focus();
         return;
       }
 
       if (!peripherals || peripherals.length === 0) {
-        alert("⚠️ Campo em falta: 'Periféricos do Conjunto'. Selecione pelo menos um periférico.");
+        alert("⚠️ Campo em falta: 'Periféricos do Conjunto'. Selecione pelo menos um.");
         return;
       }
 
-      const normalizedCode = code.toLowerCase();
       const existingMachine = machines.find(m => {
         if (editId && m.id === editId) return false;
-        return String(m.code || '').trim().toLowerCase() === normalizedCode && !isNotApp;
+        return String(m.code || '').trim() === code && !isNotApp;
       });
 
       if (existingMachine) {
-        alert(`❌ Atenção: O gabinete/património "${code}" já se encontra cadastrado no sistema!`);
+        alert(`❌ Atenção: O gabinete/património numérico "${code}" já se encontra cadastrado no sistema!`);
         document.getElementById('machine-code').focus();
         return; 
       }
 
-      // GERAR TICKET EXTRAINDO DA 5ª À 10ª CASA (EX: 991017251100 -> 172511)
+      // GERAR TICKET EXTRAINDO DA 5ª À 10ª CASA
       const ticket = generateTicketFromCode(code);
 
       const sec = sectors.find(s => s.id === currentSectorId);
