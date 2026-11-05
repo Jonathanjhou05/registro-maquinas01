@@ -658,19 +658,20 @@
       return String(str).replace(/\D/g, '');
     }
 
-    function generateTicketFromCode(code) {
-      const cleanCode = cleanOnlyNumbers(code);
-      if (cleanCode === 'NÃO SE APLICA') {
-        const naCount = machines.filter(m => m.ticket && m.ticket.startsWith('NA-')).length;
-        return `NA-${String(naCount + 1).padStart(3, '0')}`;
-      }
-      
-      // Extrai da 5ª à 10ª casa (índices 4 a 9)
-      if (cleanCode.length >= 10) {
-        return cleanCode.substring(4, 10);
-      }
-      return cleanCode;
-    }
+    // Regra atualizada: Extrai da 6ª à 10ª casa e adiciona o prefixo "N°"
+function generateTicketFromCode(code) {
+  const cleanCode = cleanOnlyNumbers(code);
+  if (cleanCode === 'NÃO SE APLICA') {
+    const naCount = machines.filter(m => m.ticket && m.ticket.startsWith('N° NA-')).length;
+    return `N° NA-${String(naCount + 1).padStart(3, '0')}`;
+  }
+  
+  if (cleanCode.length >= 10) {
+    const extracted = cleanCode.substring(5, 10);
+    return `N°${extracted}`; // Resultado: N°72511
+  }
+  return `N°${cleanCode}`;
+}
 
     function loadCustomPeripheralsFromStorage() {
       try {
