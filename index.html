@@ -1334,11 +1334,16 @@
 
       sortedFloors.forEach(f => {
         const isCurrent = f.id === currentFloorId;
+        
+        // CALCULA O TOTAL DE MÁQUINAS DESTE ANDAR
+        const floorSectorIds = sectors.filter(s => s.floor_id === f.id).map(s => s.id);
+        const floorMachineCount = machines.filter(m => floorSectorIds.includes(m.sector_id)).length;
+
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.onclick = () => { currentFloorId = f.id; renderFloorsAndSectors(); };
         btn.className = `px-4 py-2 rounded-t-xl font-bold shadow-sm whitespace-nowrap transition-all flex items-center gap-1.5 border-t border-x ${isCurrent ? 'bg-white text-indigo-900 border-indigo-400 shadow-inner' : 'bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300'}`;
-        btn.innerHTML = `<i class="fa-solid fa-layer-group text-xs"></i> ${f.name}`;
+        btn.innerHTML = `<i class="fa-solid fa-layer-group text-xs"></i> ${f.name} <span class="ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${isCurrent ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-300 text-slate-700'}">${floorMachineCount}</span>`;
         floorsContainer.appendChild(btn);
       });
 
