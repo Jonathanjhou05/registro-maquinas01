@@ -81,7 +81,7 @@
       </form>
 
       <div class="text-center text-[10px] text-slate-400">
-        InfraGest 
+        Predefinido: admin / admin
       </div>
     </div>
   </div>
@@ -200,7 +200,7 @@
           <i class="fa-solid fa-arrow-down-wide-short text-slate-400"></i>
           <span class="text-slate-500 font-semibold">Ordenar:</span>
           <select id="machine-sort-select" onchange="handleMachineSortChange(this.value)" class="bg-transparent font-bold text-blue-700 focus:outline-none cursor-pointer">
-            <option value="ticket">Ticket (5ª à 10ª casa)</option>
+            <option value="ticket">Ticket (6ª à 10ª casa)</option>
             <option value="alphabetical">Alfabética (Gabinete)</option>
             <option value="recent">Mais Recentes</option>
           </select>
@@ -277,7 +277,7 @@
       </div>
       <h3 class="font-bold text-slate-800 text-sm">Não encontrou a etiqueta no gabinete?</h3>
       <p class="text-xs text-slate-600 leading-relaxed">
-        Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize somente os 12 números correspondentes no cadastro[cite: 7].
+        Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize somente os 12 números correspondentes no cadastro.
       </p>
       <button type="button" onclick="closeHostHintModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow">
         Entendido!
@@ -507,7 +507,7 @@
               <i class="fa-solid fa-barcode text-sm"></i> Ler
             </button>
           </div>
-          <p class="text-[10px] text-slate-500 mt-1">Apenas números permitidos. O ticket gerará da 5ª à 10ª casa[cite: 7].</p>
+          <p class="text-[10px] text-slate-500 mt-1">Apenas números permitidos. O ticket gerará da 6ª à 10ª casa com prefixo N°.</p>
         </div>
 
         <!-- MONITOR (APENAS NÚMEROS) -->
@@ -597,7 +597,12 @@
   <script>
     const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
-    const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx3Jz4VREtEiSckdggjJquts1uTBlsTVQoFWLE3JOafdksrbq935_z8mBxL8PkESqc/exec";
+    
+    // Configurado com múltiplos Webhooks do Google Sheets (Antigo + Novo)
+    const GOOGLE_SHEETS_WEBHOOK_URLS = [
+      "https://script.google.com/macros/s/AKfycbx3Jz4VREtEiSckdggjJquts1uTBlsTVQoFWLE3JOafdksrbq935_z8mBxL8PkESqc/exec",
+      "https://script.google.com/macros/s/AKfycbwgSQFzJV5gVW3pxU_cMOOGGydHxIKrHz-fj1WeNUn0KOhiKaB57OkCGeY9NXSj__xbtw/exec"
+    ];
 
     let supabaseClient = null;
     try {
@@ -650,7 +655,6 @@
       document.getElementById('view-login').classList.add('hidden');
     };
 
-    // Função para limpar caracteres especiais e manter apenas números
     function cleanOnlyNumbers(str) {
       if (!str) return '';
       const upper = String(str).trim().toUpperCase();
@@ -658,20 +662,20 @@
       return String(str).replace(/\D/g, '');
     }
 
-    // Regra atualizada: Extrai da 6ª à 10ª casa e adiciona o prefixo "N°"
-function generateTicketFromCode(code) {
-  const cleanCode = cleanOnlyNumbers(code);
-  if (cleanCode === 'NÃO SE APLICA') {
-    const naCount = machines.filter(m => m.ticket && m.ticket.startsWith('N° NA-')).length;
-    return `N° NA-${String(naCount + 1).padStart(3, '0')}`;
-  }
-  
-  if (cleanCode.length >= 10) {
-    const extracted = cleanCode.substring(5, 10);
-    return `N°${extracted}`; // Resultado: N°72511
-  }
-  return `N°${cleanCode}`;
-}
+    // Regra atualizada: 6ª à 10ª casa com formato "N°XXXXX"
+    function generateTicketFromCode(code) {
+      const cleanCode = cleanOnlyNumbers(code);
+      if (cleanCode === 'NÃO SE APLICA') {
+        const naCount = machines.filter(m => m.ticket && m.ticket.startsWith('N° NA-')).length;
+        return `N° NA-${String(naCount + 1).padStart(3, '0')}`;
+      }
+      
+      if (cleanCode.length >= 10) {
+        const extracted = cleanCode.substring(5, 10);
+        return `N°${extracted}`;
+      }
+      return `N°${cleanCode}`;
+    }
 
     function loadCustomPeripheralsFromStorage() {
       try {
@@ -768,7 +772,7 @@ function generateTicketFromCode(code) {
         const currentSelected = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
         currentSelected.push(formatted);
         renderPeripheralsCheckboxes(currentSelected);
-      } else { alert(" Este periférico já existe."); }
+      } else { alert("Este periférico já existe."); }
     }
 
     function removePeripheralItem(itemToRemove) {
@@ -821,7 +825,8 @@ function generateTicketFromCode(code) {
       try {
         let existingCodesInSheet = [];
         try {
-          const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL + "?action=getCodes");
+          // Lê os códigos do primeiro webhook para checar duplicadas
+          const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URLS[0] + "?action=getCodes");
           const result = await response.json();
           if (result && Array.isArray(result.codes)) {
             existingCodesInSheet = result.codes.map(c => String(c).trim().toLowerCase());
@@ -873,11 +878,16 @@ function generateTicketFromCode(code) {
           }
         });
 
+        // Envia simultaneamente para todas as planilhas cadastradas no array
         if (newItemsToSend.length > 0) {
-          await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
-            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newItemsToSend)
-          });
+          await Promise.all(GOOGLE_SHEETS_WEBHOOK_URLS.map(webhookUrl => 
+            fetch(webhookUrl, {
+              method: 'POST', 
+              mode: 'no-cors', 
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newItemsToSend)
+            })
+          ));
         }
 
         showSyncReportModal({
@@ -887,7 +897,7 @@ function generateTicketFromCode(code) {
         });
 
       } catch (err) {
-        alert("❌ Erro ao comunicar com a planilha Google Sheets.");
+        alert("❌ Erro ao comunicar com as planilhas Google Sheets.");
       } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;
@@ -935,7 +945,7 @@ function generateTicketFromCode(code) {
         container.innerHTML += `
           <div class="bg-emerald-50 p-2 rounded border border-emerald-200 flex justify-between items-center text-xs">
             <div>
-              <span class="font-bold text-emerald-900">${reportData.sentCount} novos registos enviados com sucesso.</span>
+              <span class="font-bold text-emerald-900">${reportData.sentCount} novos registos enviados com sucesso para as planilhas.</span>
             </div>
             <span class="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">✅ ENVIADO</span>
           </div>
@@ -1034,13 +1044,12 @@ function generateTicketFromCode(code) {
       document.getElementById('stat-defeito').innerText = machines.filter(m => m.status === 'Defeito').length;
     }
 
-    // Função para limpar e corrigir os cadastros antigos (removendo letras/caracteres especiais)
     async function reorganizeSectorTickets() {
       if (!currentSectorId) return;
       const sec = sectors.find(s => s.id === currentSectorId);
       if (!sec) return;
 
-      if (!confirm(`Deseja limpar letras e caracteres especiais dos gabinetes/monitores do setor "${sec.name}" e recalcular os tickets?`)) {
+      if (!confirm(`Deseja limpar os dados e recalcular os tickets (6ª à 10ª casa) do setor "${sec.name}"?`)) {
         return;
       }
 
@@ -1068,7 +1077,7 @@ function generateTicketFromCode(code) {
         }
       }
 
-      alert(`✅ Correção concluída!\n${updatedCount} registos foram limpos de caracteres especiais e recalculados no setor ${sec.name}.`);
+      alert(`✅ Correção concluída!\n${updatedCount} registos atualizados para a regra da 6ª à 10ª casa.`);
       renderMachines();
     }
 
@@ -1745,7 +1754,6 @@ function generateTicketFromCode(code) {
       reader.readAsArrayBuffer(file);
     }
 
-    // === VALIDAÇÃO RESTRITA: APENAS NÚMEROS E 12 DÍGITOS ===
     async function saveMachine(e) {
       e.preventDefault();
       const editId = document.getElementById('edit-machine-id').value;
@@ -1758,7 +1766,7 @@ function generateTicketFromCode(code) {
       const peripherals = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
 
       if (!code) {
-        alert("⚠️ Campo em falta: 'Etiqueta / Gabinete'. Se não encontrar a etiqueta física, verifique o Host Name na área de trabalho ou clique em 'N/A'.");
+        alert("⚠️ Campo em falta: 'Etiqueta / Gabinete'.");
         document.getElementById('machine-code').focus();
         return;
       }
@@ -1766,7 +1774,7 @@ function generateTicketFromCode(code) {
       const isNotApp = code === 'NÃO SE APLICA';
       if (!isNotApp) {
         if (code.length !== 12 || !/^\d+$/.test(code)) {
-          alert("⚠️ O campo do Gabinete deve conter APENAS NÚMEROS e exatamente 12 dígitos (Ex: 991017251100). Letras e caracteres especiais não são permitidos.");
+          alert("⚠️ O campo do Gabinete deve conter APENAS NÚMEROS e exatamente 12 dígitos (Ex: 991017251100).");
           document.getElementById('machine-code').focus();
           return;
         }
@@ -1779,7 +1787,7 @@ function generateTicketFromCode(code) {
       }
 
       if (!monitor) {
-        alert("⚠️ Campo em falta: 'Etiqueta / Monitor'. Por favor, preencha com números ou clique em 'Não se aplica'.");
+        alert("⚠️ Campo em falta: 'Etiqueta / Monitor'.");
         document.getElementById('machine-monitor').focus();
         return;
       }
@@ -1818,7 +1826,6 @@ function generateTicketFromCode(code) {
         return; 
       }
 
-      // GERAR TICKET EXTRAINDO DA 5ª À 10ª CASA
       const ticket = generateTicketFromCode(code);
 
       const sec = sectors.find(s => s.id === currentSectorId);
