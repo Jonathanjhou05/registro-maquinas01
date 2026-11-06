@@ -620,6 +620,7 @@
     const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
     
+    // Múltiplos Webhooks do Google Sheets
     const GOOGLE_SHEETS_WEBHOOK_URLS = [
       "https://script.google.com/macros/s/AKfycbx3Jz4VREtEiSckdggjJquts1uTBlsTVQoFWLE3JOafdksrbq935_z8mBxL8PkESqc/exec",
       "https://script.google.com/macros/s/AKfycbwgSQFzJV5gVW3pxU_cMOOGGydHxIKrHz-fj1WeNUn0KOhiKaB57OkCGeY9NXSj__xbtw/exec"
@@ -658,7 +659,7 @@
       loadCustomModelsFromStorage();
       setupNetworkListeners();
       
-      // FIX DO LOGIN: Limpa sessão residual para forçar login real
+      // FIX DO LOGIN: Limpa sessão residual ao recarregar a página
       sessionStorage.removeItem('reg_current_user');
       currentUser = null;
 
@@ -675,6 +676,7 @@
       return String(str).replace(/\D/g, '');
     }
 
+    // Regra do Ticket: Extrai da 6ª à 10ª casa e insere o prefixo "N°"
     function generateTicketFromCode(code) {
       const cleanCode = cleanOnlyNumbers(code);
       if (cleanCode === 'NÃO SE APLICA') {
@@ -835,6 +837,7 @@
       document.getElementById('modal-sync-options').classList.add('hidden');
     }
 
+    // ROTINA DE SINCRONIZAÇÃO COM VALIDAÇÃO RIGOROSA DE DUPLICADOS (GABINETE E TICKET)
     async function executeSync(mode) {
       closeSyncOptionsModal();
       const btn = document.getElementById('btn-sync-sheets');
@@ -862,6 +865,7 @@
           const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
           const floorName = floor ? floor.name.toUpperCase() : 'GERAL';
           const sectorName = sec ? sec.name.toUpperCase() : 'GERAL';
+          const ticketTrim = String(m.ticket || '').trim().toLowerCase();
 
           if (!codeTrim || codeTrim === '' || !m.sector_id) {
             inconsistentItemsFound.push({
@@ -873,7 +877,16 @@
             return;
           }
 
-          const isAlreadyInSheet = existingCodesInSheet.includes(codeTrim.toLowerCase());
+          // Bloqueio rigoroso: Checa se Gabinete OU Ticket já existem na planilha
+          const isAlreadyInSheet = existingCodesInSheet.some(existing => {
+            const cleanExisting = existing.replace(/\s+/g, '');
+            const cleanCode = codeTrim.toLowerCase().replace(/\s+/g, '');
+            const cleanTicket = ticketTrim.replace(/\s+/g, '');
+            
+            return cleanExisting === cleanCode || 
+                   cleanExisting === cleanTicket || 
+                   (cleanCode !== 'não se aplica' && cleanExisting.endsWith(cleanCode));
+          });
 
           const itemData = {
             floor: floorName,
@@ -894,18 +907,18 @@
               code: codeTrim,
               model: m.model || 'Não especificado',
               sector: sectorName,
-              reason: 'Já existe na planilha (Registado como Antigo)'
+              reason: `Já existe na planilha (Gabinete: ${codeTrim} / Ticket: ${m.ticket})`
             });
-            // Se o usuário escolheu "Sincronizar Tudo", envia mesmo já existindo
+            
             if (mode === 'all') {
               itemsToSend.push(itemData);
             }
           } else {
-            // Se for modo 'new' ou 'all', envia os novos
             itemsToSend.push(itemData);
           }
         });
 
+        // Envio simultâneo para ambas as planilhas
         if (itemsToSend.length > 0) {
           await Promise.all(GOOGLE_SHEETS_WEBHOOK_URLS.map(webhookUrl => 
             fetch(webhookUrl, {
@@ -918,7 +931,7 @@
         }
 
         showSyncReportModal({
-          sentCount: mode === 'new' ? (itemsToSend.length - duplicateItemsFound.length) : itemsToSend.length,
+          sentCount: mode === 'new' ? itemsToSend.length : itemsToSend.length,
           sentDetails: itemsToSend,
           duplicates: duplicateItemsFound,
           inconsistencies: inconsistentItemsFound,
@@ -1409,7 +1422,7 @@
       const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       if (sortedSectors.length === 0) {
-        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
+        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
         return;
       }
 
