@@ -1713,7 +1713,7 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
-    // IMPORTAÇÃO INTELIGENTE DO EXCEL COM TRATAMENTO DE NOMES E ANDARES
+    // REGRA ATUALIZADA: IMPORTAÇÃO DIRETA PARA A ABA/ANDAR ATIVO SELECIONADO NA TELA
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1725,12 +1725,18 @@
           const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
           if (!rows || rows.length === 0) { alert("Folha vazia."); return; }
 
+          // Utiliza rigorosamente a aba/andar atualmente selecionada na interface
+          const targetFloorId = currentFloorId;
+          if (!targetFloorId) {
+            alert("⚠️ Selecione primeiro um Andar (Aba) na tela antes de importar a planilha.");
+            return;
+          }
+
           let count = 0;
           for (const row of rows) {
             let rawSetor = String(row['SETOR'] || row['Setor'] || 'GERAL').trim();
             rawSetor = rawSetor.replace(/\s+/g, ' ').toUpperCase();
             
-            // Correções automáticas para nomes comuns colados na planilha
             if (rawSetor === 'CLINICA MEDICACORREDOR') rawSetor = 'CLINICA MEDICA CORREDOR';
 
             const code = cleanOnlyNumbers(row['Etiqueta Gabinete'] || row['GABINETE'] || row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '');
@@ -1739,24 +1745,12 @@
 
             if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
 
-            // Deteção inteligente de andar com base no nome do setor
-            let targetFloorId = currentFloorId || floors[0].id;
-            if (rawSetor.includes('2° ANDAR') || rawSetor.includes('2 ANDAR') || rawSetor.includes('2º ANDAR')) {
-              const f2 = floors.find(f => f.name.toUpperCase().includes('2'));
-              if (f2) targetFloorId = f2.id;
-            } else if (rawSetor.includes('3° ANDAR') || rawSetor.includes('3 ANDAR') || rawSetor.includes('3º ANDAR')) {
-              const f3 = floors.find(f => f.name.toUpperCase().includes('3'));
-              if (f3) targetFloorId = f3.id;
-            } else if (rawSetor.includes('1° ANDAR') || rawSetor.includes('1 ANDAR') || rawSetor.includes('1º ANDAR')) {
-              const f1 = floors.find(f => f.name.toUpperCase().includes('1'));
-              if (f1) targetFloorId = f1.id;
-            }
-
-            let sec = sectors.find(s => s.name.toUpperCase() === rawSetor);
+            // Procura ou cria o setor estritamente dentro da aba/andar ativo selecionado
+            let sec = sectors.find(s => s.floor_id === targetFloorId && s.name.toUpperCase() === rawSetor);
             let sectorId = sec ? sec.id : null;
 
             if (!sec) {
-              sectorId = 'sec_' + Date.now + '_' + Math.random().toString(36).substr(2, 4);
+              sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
               const newSector = { id: sectorId, floor_id: targetFloorId, name: rawSetor, color: '#2563eb' };
               
               const { error: secErr } = await supabaseClient.from('sectors').insert([newSector]);
@@ -1786,7 +1780,7 @@
             count++;
           }
 
-          alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas nos respetivos setores.`);
+          alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas na aba atual.`);
           renderFloorsAndSectors();
           if (currentSectorId) renderMachines();
         } catch (err) {
