@@ -98,10 +98,6 @@
       <button onclick="openSyncOptionsModal()" title="Atualizar Folha Online" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
         <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Sync Sheets</span>
       </button>
-      <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer">
-        <i class="fa-solid fa-file-arrow-up"></i> <span class="hidden sm:inline">Importar</span>
-        <input type="file" id="import-excel-file" accept=".xlsx, .xls, .csv" onchange="handleExcelImport(event)" class="hidden">
-      </label>
       <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow">
         <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Baixar</span>
       </button>
@@ -156,14 +152,19 @@
         <div id="floors-tabs-container" class="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs"></div>
       </div>
 
-      <!-- CABEÇALHO DO ANDAR ATUAL E SUAS PASTAS -->
-      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <!-- CABEÇALHO DO ANDAR ATUAL E BOTÃO DE IMPORTAÇÃO INTEGRADO -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
           <h3 id="current-floor-title" class="font-bold text-sm text-indigo-900">Andar</h3>
           <p id="current-floor-subtitle" class="text-[11px] text-slate-500">Selecione um andar acima</p>
         </div>
-        <div class="flex items-center gap-1">
-          <button onclick="editCurrentFloor()" id="btn-edit-floor" class="hidden text-xs text-slate-500 hover:text-indigo-600 px-2 py-1"><i class="fa-solid fa-pen"></i> Renomear</button>
+        <div class="flex items-center gap-2">
+          <!-- BOTÃO DE IMPORTAÇÃO DEDICADO PARA ESTE ANDAR -->
+          <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer transition">
+            <i class="fa-solid fa-file-arrow-up"></i> <span>Importar para este Andar</span>
+            <input type="file" id="import-excel-file" accept=".xlsx, .xls, .csv" onchange="handleExcelImport(event)" class="hidden">
+          </label>
+          <button onclick="editCurrentFloor()" id="btn-edit-floor" class="hidden text-xs text-slate-500 hover:text-indigo-600 px-2 py-1"><i class="fa-solid fa-pen"></i></button>
           <button onclick="deleteCurrentFloor()" id="btn-delete-floor" class="hidden text-xs text-slate-400 hover:text-red-600 px-2 py-1" title="Excluir Andar"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </div>
@@ -620,7 +621,6 @@
     const SUPABASE_URL = "https://hkjnfhgkqlnmqzcdnsbw.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhram5maGdrcWxubXF6Y2Ruc2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NzY5MzEsImV4cCI6MjEwODM1MjkzMX0.l_SgJ1kJujNXgDXVUYTXrzci-RlfEkx2hBEbf-FnJHw"; 
     
-    // Múltiplos Webhooks do Google Sheets
     const GOOGLE_SHEETS_WEBHOOK_URLS = [
       "https://script.google.com/macros/s/AKfycbx3Jz4VREtEiSckdggjJquts1uTBlsTVQoFWLE3JOafdksrbq935_z8mBxL8PkESqc/exec",
       "https://script.google.com/macros/s/AKfycbwgSQFzJV5gVW3pxU_cMOOGGydHxIKrHz-fj1WeNUn0KOhiKaB57OkCGeY9NXSj__xbtw/exec"
@@ -659,7 +659,6 @@
       loadCustomModelsFromStorage();
       setupNetworkListeners();
       
-      // FIX DO LOGIN: Limpa sessão residual ao recarregar a página
       sessionStorage.removeItem('reg_current_user');
       currentUser = null;
 
@@ -676,7 +675,6 @@
       return String(str).replace(/\D/g, '');
     }
 
-    // Regra do Ticket: Extrai da 6ª à 10ª casa e insere o prefixo "N°"
     function generateTicketFromCode(code) {
       const cleanCode = cleanOnlyNumbers(code);
       if (cleanCode === 'NÃO SE APLICA') {
@@ -837,7 +835,6 @@
       document.getElementById('modal-sync-options').classList.add('hidden');
     }
 
-    // ROTINA DE SINCRONIZAÇÃO COM VALIDAÇÃO RIGOROSA DE DUPLICADOS (GABINETE E TICKET)
     async function executeSync(mode) {
       closeSyncOptionsModal();
       const btn = document.getElementById('btn-sync-sheets');
@@ -877,7 +874,6 @@
             return;
           }
 
-          // Bloqueio rigoroso: Checa se Gabinete OU Ticket já existem na planilha
           const isAlreadyInSheet = existingCodesInSheet.some(existing => {
             const cleanExisting = existing.replace(/\s+/g, '');
             const cleanCode = codeTrim.toLowerCase().replace(/\s+/g, '');
@@ -918,7 +914,6 @@
           }
         });
 
-        // Envio simultâneo para ambas as planilhas
         if (itemsToSend.length > 0) {
           await Promise.all(GOOGLE_SHEETS_WEBHOOK_URLS.map(webhookUrl => 
             fetch(webhookUrl, {
@@ -1422,7 +1417,7 @@
       const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       if (sortedSectors.length === 0) {
-        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
+        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima ou importe uma planilha para criar pastas.</p></div>`;
         return;
       }
 
@@ -1713,7 +1708,7 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
-    // REGRA ATUALIZADA: IMPORTAÇÃO DIRETA PARA A ABA/ANDAR ATIVO SELECIONADO NA TELA
+    // IMPORTAÇÃO VINCULADA RIGOROSAMENTE AO ANDAR ATIVO SELECIONADO NA TELA
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1725,10 +1720,10 @@
           const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
           if (!rows || rows.length === 0) { alert("Folha vazia."); return; }
 
-          // Utiliza rigorosamente a aba/andar atualmente selecionada na interface
           const targetFloorId = currentFloorId;
-          if (!targetFloorId) {
-            alert("⚠️ Selecione primeiro um Andar (Aba) na tela antes de importar a planilha.");
+          const activeFloor = floors.find(f => f.id === targetFloorId);
+          if (!targetFloorId || !activeFloor) {
+            alert("⚠️ Selecione primeiro um Andar válido na barra de abas.");
             return;
           }
 
@@ -1745,7 +1740,7 @@
 
             if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
 
-            // Procura ou cria o setor estritamente dentro da aba/andar ativo selecionado
+            // Procura ou cria o setor estritamente no andar ativo atual
             let sec = sectors.find(s => s.floor_id === targetFloorId && s.name.toUpperCase() === rawSetor);
             let sectorId = sec ? sec.id : null;
 
@@ -1780,7 +1775,7 @@
             count++;
           }
 
-          alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas na aba atual.`);
+          alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas na aba "${activeFloor.name}".`);
           renderFloorsAndSectors();
           if (currentSectorId) renderMachines();
         } catch (err) {
