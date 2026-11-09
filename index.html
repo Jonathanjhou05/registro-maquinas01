@@ -1422,7 +1422,7 @@
       const sortedSectors = [...floorSectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
 
       if (sortedSectors.length === 0) {
-        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
+        sectorsContainer.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300 p-6"><p class="text-sm font-semibold text-slate-600">Nenhum setor neste andar</p><p class="text-xs text-slate-400 mt-1">Clique em "Novo Setor" acima para adicionar pastas.</p></div>`;
         return;
       }
 
@@ -1713,6 +1713,7 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
+    // IMPORTAÇÃO INTELIGENTE DO EXCEL COM TRATAMENTO DE NOMES E ANDARES
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1726,20 +1727,37 @@
 
           let count = 0;
           for (const row of rows) {
-            const sectorNameRaw = String(row['SETOR'] || row['Setor'] || 'GERAL').trim().toUpperCase();
-            const code = cleanOnlyNumbers(row['GABINETE'] || row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '');
-            const monitor = cleanOnlyNumbers(row['MONITOR'] || row['Monitor'] || '');
-            if (!code || !sectorNameRaw) continue;
+            let rawSetor = String(row['SETOR'] || row['Setor'] || 'GERAL').trim();
+            rawSetor = rawSetor.replace(/\s+/g, ' ').toUpperCase();
+            
+            // Correções automáticas para nomes comuns colados na planilha
+            if (rawSetor === 'CLINICA MEDICACORREDOR') rawSetor = 'CLINICA MEDICA CORREDOR';
+
+            const code = cleanOnlyNumbers(row['Etiqueta Gabinete'] || row['GABINETE'] || row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '');
+            const monitor = cleanOnlyNumbers(row['Etiqueta Monitor'] || row['MONITOR'] || row['Monitor'] || '');
+            if (!code || !rawSetor) continue;
 
             if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
 
-            let sec = sectors.find(s => s.name.toUpperCase() === sectorNameRaw);
+            // Deteção inteligente de andar com base no nome do setor
+            let targetFloorId = currentFloorId || floors[0].id;
+            if (rawSetor.includes('2° ANDAR') || rawSetor.includes('2 ANDAR') || rawSetor.includes('2º ANDAR')) {
+              const f2 = floors.find(f => f.name.toUpperCase().includes('2'));
+              if (f2) targetFloorId = f2.id;
+            } else if (rawSetor.includes('3° ANDAR') || rawSetor.includes('3 ANDAR') || rawSetor.includes('3º ANDAR')) {
+              const f3 = floors.find(f => f.name.toUpperCase().includes('3'));
+              if (f3) targetFloorId = f3.id;
+            } else if (rawSetor.includes('1° ANDAR') || rawSetor.includes('1 ANDAR') || rawSetor.includes('1º ANDAR')) {
+              const f1 = floors.find(f => f.name.toUpperCase().includes('1'));
+              if (f1) targetFloorId = f1.id;
+            }
+
+            let sec = sectors.find(s => s.name.toUpperCase() === rawSetor);
             let sectorId = sec ? sec.id : null;
 
             if (!sec) {
-              sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-              const defaultFloorId = currentFloorId || floors[0].id;
-              const newSector = { id: sectorId, floor_id: defaultFloorId, name: sectorNameRaw, color: '#2563eb' };
+              sectorId = 'sec_' + Date.now + '_' + Math.random().toString(36).substr(2, 4);
+              const newSector = { id: sectorId, floor_id: targetFloorId, name: rawSetor, color: '#2563eb' };
               
               const { error: secErr } = await supabaseClient.from('sectors').insert([newSector]);
               if (secErr) { alert("Erro ao criar setor na importação: " + secErr.message); continue; }
@@ -1768,7 +1786,7 @@
             count++;
           }
 
-          alert(`Importação concluída!\nForam salvas ${count} novas máquinas no servidor.`);
+          alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas nos respetivos setores.`);
           renderFloorsAndSectors();
           if (currentSectorId) renderMachines();
         } catch (err) {
