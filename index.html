@@ -145,9 +145,14 @@
       <div class="space-y-2">
         <div class="flex justify-between items-center">
           <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Andares (Abas)</span>
-          <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
-            <i class="fa-solid fa-folder-plus"></i> Novo Setor
-          </button>
+          <div class="flex gap-2">
+            <button onclick="openAllFoldersModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1.5 rounded-md flex items-center gap-1 shadow-sm border border-indigo-200">
+              <i class="fa-solid fa-list-ul"></i> Listar Todas as Pastas
+            </button>
+            <button onclick="openFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-md flex items-center gap-1 shadow-sm">
+              <i class="fa-solid fa-folder-plus"></i> Novo Setor
+            </button>
+          </div>
         </div>
         <div id="floors-tabs-container" class="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs"></div>
       </div>
@@ -216,10 +221,19 @@
       <div id="admin-restricted-box" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center hidden">
         <i class="fa-solid fa-lock text-3xl text-amber-500 mb-2"></i>
         <h3 class="font-bold text-slate-800 text-sm">Acesso Restrito ao Administrador</h3>
-        <p class="text-xs text-slate-500 mt-1">Apenas contas com perfil ADMIN podem gerir utilizadores e auditorias.</p>
+        <p class="text-xs text-slate-500 mt-1">Apenas contas com perfil ADMIN podem gerir utilizadores, auditorias e setores globais.</p>
       </div>
 
       <div id="admin-panel" class="space-y-4">
+        <!-- PAINEL DE GESTÃO E LISTAGEM DE TODAS AS PASTAS/SETORES -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-folder-tree mr-1 text-indigo-600"></i> Todas as Pastas & Setores Cadastrados</h3>
+            <button onclick="renderAdminFoldersList()" class="text-xs text-blue-600 font-semibold"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+          </div>
+          <div id="admin-all-folders-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        </div>
+
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
           <div class="flex justify-between items-center border-b pb-2">
             <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-users-gear mr-1 text-blue-600"></i> Gerir Utilizadores</h3>
@@ -269,6 +283,23 @@
       <span class="text-[10px] font-medium">Ajustes</span>
     </button>
   </nav>
+
+  <!-- MODAL: LISTAGEM COMPLETA DE TODAS AS PASTAS -->
+  <div id="modal-all-folders" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
+        <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-list-ul mr-1.5 text-indigo-600"></i> Todas as Pastas Cadastradas</h3>
+        <button onclick="closeAllFoldersModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-4 bg-slate-50 border-b border-slate-100">
+        <input type="text" id="modal-folder-search" oninput="filterModalFolders(this.value)" placeholder="Filtrar por nome do setor ou andar..." class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div id="modal-all-folders-container" class="p-5 space-y-2 overflow-y-auto flex-1 text-xs"></div>
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end">
+        <button type="button" onclick="closeAllFoldersModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: OPÇÕES DE SINCRONIZAÇÃO -->
   <div id="modal-sync-options" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -1053,6 +1084,7 @@
 
         renderFloorsAndSectors();
         if (currentSectorId) renderMachines();
+        renderAdminFoldersList();
       } catch (err) {
         console.error(err);
       }
@@ -1261,10 +1293,108 @@
         document.getElementById('admin-panel').classList.remove('hidden');
         await loadUsersManagement();
         await loadAuditLogs();
+        renderAdminFoldersList();
       } else {
         document.getElementById('admin-restricted-box').classList.remove('hidden');
         document.getElementById('admin-panel').classList.add('hidden');
       }
+    }
+
+    function renderAdminFoldersList() {
+      const container = document.getElementById('admin-all-folders-list');
+      if(!container) return;
+      container.innerHTML = '';
+
+      if (!sectors || sectors.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Sem setores cadastrados.</p>`;
+        return;
+      }
+
+      const sortedSectors = [...sectors].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
+
+      sortedSectors.forEach(sec => {
+        const floor = floors.find(f => f.id === sec.floor_id);
+        const count = machines.filter(m => m.sector_id === sec.id).length;
+        
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs";
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full" style="background-color: ${sec.color || '#2563eb'};"></span>
+            <div>
+              <span class="font-bold text-slate-800">${sec.name}</span>
+              <span class="text-[10px] text-indigo-700 font-semibold ml-2">(${floor ? floor.name : 'Sem Andar'})</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">${count} máquina(s)</span>
+            <button onclick="editFolder('${sec.id}')" class="text-blue-600 hover:text-blue-800 font-semibold text-[11px]"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="deleteFolder('${sec.id}')" class="text-red-500 hover:text-red-700 font-semibold text-[11px]"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openAllFoldersModal() {
+      renderModalFoldersList(sectors);
+      document.getElementById('modal-all-folders').classList.remove('hidden');
+    }
+
+    function closeAllFoldersModal() {
+      document.getElementById('modal-all-folders').classList.add('hidden');
+    }
+
+    function renderModalFoldersList(listToRender) {
+      const container = document.getElementById('modal-all-folders-container');
+      if(!container) return;
+      container.innerHTML = '';
+
+      if (!listToRender || listToRender.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Nenhuma pasta encontrada.</p>`;
+        return;
+      }
+
+      const sortedSectors = [...listToRender].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
+
+      sortedSectors.forEach(sec => {
+        const floor = floors.find(f => f.id === sec.floor_id);
+        const count = machines.filter(m => m.sector_id === sec.id).length;
+
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-xs cursor-pointer hover:border-indigo-300 transition";
+        item.onclick = () => {
+          closeAllFoldersModal();
+          openSectorItems(sec.id);
+        };
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background-color: ${sec.color || '#2563eb'}20; color: ${sec.color || '#2563eb'};">
+              <i class="fa-solid fa-folder"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-800">${sec.name}</h4>
+              <p class="text-[10px] text-slate-500">Andar: <strong class="text-indigo-800">${floor ? floor.name : 'Desconhecido'}</strong></p>
+            </div>
+          </div>
+          <span class="text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 rounded-full">${count} máquina(s)</span>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function filterModalFolders(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        renderModalFoldersList(sectors);
+        return;
+      }
+      const filtered = sectors.filter(s => {
+        const floor = floors.find(f => f.id === s.floor_id);
+        const floorName = floor ? floor.name.toLowerCase() : '';
+        return s.name.toLowerCase().includes(q) || floorName.includes(q);
+      });
+      renderModalFoldersList(filtered);
     }
 
     async function loadUsersManagement() {
@@ -1490,6 +1620,7 @@
       closeFolderModal();
       currentFloorId = floor_id;
       renderFloorsAndSectors();
+      renderAdminFoldersList();
     }
 
     function editFolder(id) {
@@ -1518,6 +1649,7 @@
         machines = machines.filter(m => m.sector_id !== id);
         
         renderFloorsAndSectors();
+        renderAdminFoldersList();
         updateDashboardStats();
       }
     }
@@ -1708,7 +1840,6 @@
       } else { document.getElementById('scanner-container').classList.add('hidden'); }
     }
 
-    // IMPORTAÇÃO VINCULADA RIGOROSAMENTE AO ANDAR ATIVO SELECIONADO NA TELA
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1740,7 +1871,6 @@
 
             if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
 
-            // Procura ou cria o setor estritamente no andar ativo atual
             let sec = sectors.find(s => s.floor_id === targetFloorId && s.name.toUpperCase() === rawSetor);
             let sectorId = sec ? sec.id : null;
 
@@ -1777,6 +1907,7 @@
 
           alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas na aba "${activeFloor.name}".`);
           renderFloorsAndSectors();
+          renderAdminFoldersList();
           if (currentSectorId) renderMachines();
         } catch (err) {
           alert("Erro ao processar ficheiro: " + err.message);
