@@ -286,7 +286,7 @@
     </button>
   </nav>
 
-  <!-- MODAL: LISTAGEM COMPLETA DE TODAS AS PASTAS COM SELEÇÃO MÚLTIPLA E MOVIMENTAÇÃO EM LOTE -->
+  <!-- MODAL: LISTAGEM COMPLETA DE TODAS AS PASTAS COM SELEÇÃO MÚLTIPLA E AÇÕES EM LOTE -->
   <div id="modal-all-folders" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50 flex-none">
@@ -307,18 +307,26 @@
         </label>
       </div>
 
-      <!-- BARRA DE AÇÕES EM LOTE PARA PASTAS SELECIONADAS -->
-      <div class="bg-indigo-50 px-4 py-2.5 border-b border-indigo-100 flex items-center justify-between gap-2 flex-none">
+      <!-- BARRA DE AÇÕES EM LOTE (MOVER, EXCLUIR SELECIONADAS E LIMPAR VAZIAS) -->
+      <div class="bg-indigo-50 px-4 py-2.5 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2 flex-none">
         <div class="flex items-center gap-2">
           <input type="checkbox" id="select-all-folders-chk" onchange="toggleSelectAllModalFolders(this.checked)" class="rounded text-indigo-600 w-4 h-4 cursor-pointer">
           <span class="text-xs font-bold text-indigo-900" id="selected-folders-count">0 selecionadas</span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
           <select id="batch-move-floor-select" class="bg-white border border-indigo-300 rounded-lg px-2 py-1 text-xs font-bold text-indigo-900 focus:outline-none">
-            <option value="">Mover selecionadas para...</option>
+            <option value="">Mover para...</option>
           </select>
-          <button type="button" onclick="executeBatchMoveFolders()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap">
+          <button type="button" onclick="executeBatchMoveFolders()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap">
             Mover
+          </button>
+          <!-- BOTÃO DE EXCLUIR SELECIONADAS -->
+          <button type="button" onclick="executeBatchDeleteFolders()" title="Excluir pastas selecionadas e seus itens" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1">
+            <i class="fa-solid fa-trash-can"></i> Excluir
+          </button>
+          <!-- BOTÃO DE LIMPEZA AUTOMÁTICA -->
+          <button type="button" onclick="executeAutoCleanup()" title="Limpar automaticamente pastas vazias e órfãs" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1">
+            <i class="fa-solid fa-broom"></i> Vazias
           </button>
         </div>
       </div>
@@ -1383,7 +1391,7 @@
     function populateBatchFloorSelect() {
       const select = document.getElementById('batch-move-floor-select');
       if (!select) return;
-      select.innerHTML = '<option value="">Mover selecionadas para...</option>';
+      select.innerHTML = '<option value="">Mover para...</option>';
       floors.forEach(f => {
         select.innerHTML += `<option value="${f.id}">${f.name}</option>`;
       });
@@ -1486,6 +1494,85 @@
       renderModalFoldersList(sectors);
       document.getElementById('select-all-folders-chk').checked = false;
       document.getElementById('batch-move-floor-select').value = '';
+    }
+
+    /* FUNÇÃO DE EXCLUSÃO EM LOTE DE PASTAS SELECIONADAS */
+    async function executeBatchDeleteFolders() {
+      const selectedIds = Array.from(document.querySelectorAll('.folder-select-chk:checked')).map(chk => chk.value);
+      if (selectedIds.length === 0) {
+        alert("⚠️ Selecione pelo menos uma pasta para excluir.");
+        return;
+      }
+
+      if (!confirm(`⚠️ ATENÇÃO!\nTem certeza que deseja excluir ${selectedIds.length} pasta(s) selecionada(s) e TODAS as máquinas contidas nelas?`)) {
+        return;
+      }
+
+      let deletedCount = 0;
+      for (const secId of selectedIds) {
+        const { error } = await supabaseClient.from('sectors').delete().eq('id', secId);
+        if (!error) {
+          sectors = sectors.filter(s => s.id !== secId);
+          machines = machines.filter(m => m.sector_id !== secId);
+          deletedCount++;
+        }
+      }
+
+      alert(`✅ Sucesso!\n${deletedCount} pasta(s) e seus registos foram excluídos.`);
+      renderFloorsAndSectors();
+      renderAdminFoldersList();
+      renderModalFoldersList(sectors);
+      updateDashboardStats();
+      document.getElementById('select-all-folders-chk').checked = false;
+    }
+
+    /* FUNÇÃO DE LIMPEZA AUTOMÁTICA DE PASTAS VAZIAS E ÓRFÃS */
+    async function executeAutoCleanup() {
+      const emptySectors = sectors.filter(sec => {
+        const count = machines.filter(m => m.sector_id === sec.id).length;
+        return count === 0;
+      });
+
+      const orphanMachines = machines.filter(m => {
+        return !sectors.some(s => s.id === m.sector_id);
+      });
+
+      if (emptySectors.length === 0 && orphanMachines.length === 0) {
+        alert("✨ O sistema está limpo! Não foram encontradas pastas vazias ou registos órfãos.");
+        return;
+      }
+
+      let msg = `⚠️ Relatório de Limpeza Automática:\n`;
+      if (emptySectors.length > 0) msg += `• ${emptySectors.length} pasta(s) sem nenhuma máquina.\n`;
+      if (orphanMachines.length > 0) msg += `• ${orphanMachines.length} máquina(s) órfã(s) sem setor válido.\n`;
+      msg += `\nDeseja remover estes itens automaticamente?`;
+
+      if (!confirm(msg)) return;
+
+      let deletedSectorsCount = 0;
+      let deletedMachinesCount = 0;
+
+      for (const sec of emptySectors) {
+        const { error } = await supabaseClient.from('sectors').delete().eq('id', sec.id);
+        if (!error) {
+          sectors = sectors.filter(s => s.id !== sec.id);
+          deletedSectorsCount++;
+        }
+      }
+
+      for (const m of orphanMachines) {
+        const { error } = await supabaseClient.from('machines').delete().eq('id', m.id);
+        if (!error) {
+          machines = machines.filter(item => item.id !== m.id);
+          deletedMachinesCount++;
+        }
+      }
+
+      alert(`✅ Limpeza concluída com sucesso!\n• Pastas vazias removidas: ${deletedSectorsCount}\n• Máquinas órfãs removidas: ${deletedMachinesCount}`);
+      renderFloorsAndSectors();
+      renderAdminFoldersList();
+      renderModalFoldersList(sectors);
+      updateDashboardStats();
     }
 
     function filterModalFolders(query) {
