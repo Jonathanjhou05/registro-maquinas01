@@ -254,10 +254,10 @@
       </div>
     </section>
 
-    <!-- VIEW 4: SETTINGS -->
+    <!-- VIEW 4: SETTINGS (COM SUPORTE A BACKUP E RESTAURAÇÃO JSON) -->
     <section id="view-settings" class="hidden space-y-4">
       <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-        <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2">
+        <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-sm">
           <i class="fa-solid fa-user-shield text-blue-600"></i> Sessão Atual
         </h3>
         <p class="text-xs text-slate-600">Conectado como: <strong id="current-user-display" class="text-blue-700">-</strong></p>
@@ -265,6 +265,25 @@
         <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs py-2.5 px-3 rounded-lg border border-red-200 mt-2">
           <i class="fa-solid fa-right-from-bracket mr-1"></i> Terminar Sessão (Logout)
         </button>
+      </div>
+
+      <!-- PAINEL DE BACKUP E RESTAURAÇÃO JSON -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-database text-purple-600"></i> Backup & Restauração (JSON)
+        </h3>
+        <p class="text-xs text-slate-500">Exporte ou importe todos os dados da aplicação em formato JSON seguro.</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          <button onclick="exportDatabaseJson()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-download"></i> Exportar Backup JSON
+          </button>
+          
+          <label class="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow flex items-center justify-center gap-1.5 cursor-pointer transition">
+            <i class="fa-solid fa-upload"></i> Restaurar Backup JSON
+            <input type="file" id="import-json-file" accept=".json" onchange="importDatabaseJson(event)" class="hidden">
+          </label>
+        </div>
       </div>
     </section>
 
@@ -1573,6 +1592,83 @@
       renderAdminFoldersList();
       renderModalFoldersList(sectors);
       updateDashboardStats();
+    }
+
+    /* FUNÇÕES DE BACKUP E RESTAURAÇÃO DE BASE DE DADOS EM JSON */
+    function exportDatabaseJson() {
+      const backupData = {
+        app: "InfraGest",
+        timestamp: new Date().toISOString(),
+        floors: floors,
+        sectors: sectors,
+        machines: machines,
+        customPeripherals: customPeripheralsList,
+        customModels: customModelsList
+      };
+
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `InfraGest_BackupDB_${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+    }
+
+    async function importDatabaseJson(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (!parsed.floors || !parsed.sectors || !parsed.machines) {
+            alert("⚠️ Ficheiro JSON inválido. Deve conter floors, sectors e machines.");
+            return;
+          }
+
+          if (!confirm(`⚠️ ATENÇÃO!\nEsta ação irá mesclar/sincronizar ${parsed.floors.length} andares, ${parsed.sectors.length} setores e ${parsed.machines.length} máquinas com o servidor Supabase.\n\nDeseja prosseguir?`)) {
+            return;
+          }
+
+          for (const f of parsed.floors) {
+            if (!floors.some(existing => existing.id === f.id)) {
+              await supabaseClient.from('floors').insert([f]);
+            }
+          }
+
+          for (const s of parsed.sectors) {
+            if (!sectors.some(existing => existing.id === s.id)) {
+              await supabaseClient.from('sectors').insert([s]);
+            }
+          }
+
+          for (const m of parsed.machines) {
+            if (!machines.some(existing => existing.id === m.id)) {
+              await supabaseClient.from('machines').insert([m]);
+            }
+          }
+
+          if (parsed.customPeripherals && Array.isArray(parsed.customPeripherals)) {
+            customPeripheralsList = Array.from(new Set([...customPeripheralsList, ...parsed.customPeripherals]));
+            saveCustomPeripheralsToStorage();
+          }
+
+          if (parsed.customModels && Array.isArray(parsed.customModels)) {
+            customModelsList = Array.from(new Set([...customModelsList, ...parsed.customModels]));
+            saveCustomModelsToStorage();
+          }
+
+          await loadDataFromServer();
+          alert("✅ Banco de dados restaurado e sincronizado com sucesso!");
+
+        } catch (err) {
+          alert("Erro ao ler o ficheiro JSON: " + err.message);
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsText(file);
     }
 
     function filterModalFolders(query) {
