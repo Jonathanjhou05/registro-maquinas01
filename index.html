@@ -254,7 +254,7 @@
       </div>
     </section>
 
-    <!-- VIEW 4: SETTINGS (COM SUPORTE A BACKUP E RESTAURAÇÃO JSON) -->
+    <!-- VIEW 4: SETTINGS -->
     <section id="view-settings" class="hidden space-y-4">
       <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
         <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-sm">
@@ -518,7 +518,7 @@
           </div>
           <div class="flex justify-between border-b pb-1.5">
             <span class="text-slate-500 font-semibold">Andar / Setor:</span>
-            <span id="detail-sector" class="font-bold text-slate-800">-</span>
+            <span id="detail-sector" class="font-bold text-indigo-900 text-right">-</span>
           </div>
           <div class="flex justify-between border-b pb-1.5">
             <span class="text-slate-500 font-semibold">Etiqueta Gabinete:</span>
@@ -1515,7 +1515,6 @@
       document.getElementById('batch-move-floor-select').value = '';
     }
 
-    /* FUNÇÃO DE EXCLUSÃO EM LOTE DE PASTAS SELECIONADAS */
     async function executeBatchDeleteFolders() {
       const selectedIds = Array.from(document.querySelectorAll('.folder-select-chk:checked')).map(chk => chk.value);
       if (selectedIds.length === 0) {
@@ -1545,7 +1544,6 @@
       document.getElementById('select-all-folders-chk').checked = false;
     }
 
-    /* FUNÇÃO DE LIMPEZA AUTOMÁTICA DE PASTAS VAZIAS E ÓRFÃS */
     async function executeAutoCleanup() {
       const emptySectors = sectors.filter(sec => {
         const count = machines.filter(m => m.sector_id === sec.id).length;
@@ -1594,7 +1592,6 @@
       updateDashboardStats();
     }
 
-    /* FUNÇÕES DE BACKUP E RESTAURAÇÃO DE BASE DE DADOS EM JSON */
     function exportDatabaseJson() {
       const backupData = {
         app: "InfraGest",
@@ -2199,9 +2196,12 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
     function openMachineDetails(machineId) {
       const m = machines.find(item => item.id === machineId);
       if (!m) return;
+      
       const sec = sectors.find(s => s.id === m.sector_id);
       const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
-      const locationStr = (floor ? floor.name + ' > ' : '') + (sec ? sec.name : 'Geral');
+      const floorName = floor ? floor.name : 'Andar não especificado';
+      const sectorName = sec ? sec.name : 'Setor não especificado';
+      const locationStr = `${floorName} > ${sectorName}`;
 
       document.getElementById('detail-ticket').innerText = m.ticket || '-';
       document.getElementById('detail-sector').innerText = locationStr;
