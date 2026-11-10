@@ -286,7 +286,7 @@
     </button>
   </nav>
 
-  <!-- MODAL: LISTAGEM COMPLETA DE TODAS AS PASTAS COM SELEÇÃO MÚLTIPLA E MOVIMENTAÇÃO -->
+  <!-- MODAL: LISTAGEM COMPLETA DE TODAS AS PASTAS COM SELEÇÃO MÚLTIPLA E MOVIMENTAÇÃO EM LOTE -->
   <div id="modal-all-folders" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50 flex-none">
@@ -297,28 +297,30 @@
       <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-2 flex-none">
         <input type="text" id="modal-folder-search" oninput="filterModalFolders(this.value)" placeholder="Filtrar por nome do setor ou andar..." class="flex-1 min-w-[150px] bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
         
-        <!-- BOTÃO DE MOVER PASTAS SELECIONADAS -->
-        <button onclick="openMoveSelectedFoldersModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm whitespace-nowrap">
-          <i class="fa-solid fa-folder-arrow-right"></i> Mover Selecionadas
-        </button>
-
-        <button onclick="exportAllFoldersZip()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm whitespace-nowrap">
+        <button onclick="exportAllFoldersZip()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-2 rounded-lg text-xs flex items-center gap-1 shadow-sm whitespace-nowrap" title="Baixar ZIP">
           <i class="fa-solid fa-file-zipper"></i> ZIP
         </button>
 
-        <label class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap">
-          <i class="fa-solid fa-file-arrow-up"></i> ZIP
+        <label class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-2 rounded-lg text-xs flex items-center gap-1 shadow-sm cursor-pointer whitespace-nowrap" title="Importar ZIP">
+          <i class="fa-solid fa-file-arrow-up"></i> Import
           <input type="file" id="import-zip-file" accept=".zip" onchange="importFolderStructureZip(event)" class="hidden">
         </label>
       </div>
 
-      <!-- BARRA DE SELECIONAR TODOS -->
-      <div class="px-5 py-2 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-600 flex-none">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="select-all-folders-checkbox" onchange="toggleSelectAllModalFolders(this.checked)" class="rounded text-indigo-600 w-4 h-4">
-          <span>Selecionar Todas as Pastas Visíveis</span>
-        </label>
-        <span id="selected-folders-count" class="text-indigo-700 font-bold">0 selecionadas</span>
+      <!-- BARRA DE AÇÕES EM LOTE PARA PASTAS SELECIONADAS -->
+      <div class="bg-indigo-50 px-4 py-2.5 border-b border-indigo-100 flex items-center justify-between gap-2 flex-none">
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="select-all-folders-chk" onchange="toggleSelectAllModalFolders(this.checked)" class="rounded text-indigo-600 w-4 h-4 cursor-pointer">
+          <span class="text-xs font-bold text-indigo-900" id="selected-folders-count">0 selecionadas</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="batch-move-floor-select" class="bg-white border border-indigo-300 rounded-lg px-2 py-1 text-xs font-bold text-indigo-900 focus:outline-none">
+            <option value="">Mover selecionadas para...</option>
+          </select>
+          <button type="button" onclick="executeBatchMoveFolders()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap">
+            Mover
+          </button>
+        </div>
       </div>
 
       <div id="modal-all-folders-container" class="p-5 space-y-2 overflow-y-auto flex-1 text-xs"></div>
@@ -532,6 +534,149 @@
         </button>
         <button type="button" onclick="closeMachineDetails()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT USER -->
+  <div id="modal-user" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-user-title" class="font-bold text-slate-800">Novo Utilizador</h3>
+        <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form onsubmit="saveUser(event)" class="p-5 space-y-3">
+        <input type="hidden" id="user-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome de Utilizador</label>
+          <input type="text" id="modal-username" required placeholder="Ex: tecnico01" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
+          <input type="text" id="modal-password" required placeholder="Senha de acesso" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Perfil de Acesso</label>
+          <select id="modal-role" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="technician">Técnico (Padrão)</option>
+            <option value="admin">Administrador Mestre</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeUserModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT MACHINE -->
+  <div id="modal-machine" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none">
+        <h3 id="modal-machine-title" class="font-bold text-slate-800">Cadastrar Máquina</h3>
+        <button onclick="closeMachineModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form onsubmit="saveMachine(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="edit-machine-id">
+
+        <!-- GABINETE -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Gabinete (Apenas Números - 12 Dígitos) *</label>
+            <div class="flex gap-2">
+              <button type="button" onclick="openHostHintModal()" class="text-[11px] text-blue-600 font-bold hover:underline">💡 Onde achar o Host Name?</button>
+              <button type="button" onclick="setNotApplicable('machine-code')" class="text-[11px] text-amber-600 font-bold hover:underline">⚠️ N/A</button>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="machine-code" maxlength="12" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')" placeholder="Ex: 991017251100" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-800">
+            <button type="button" onclick="startScanner('code')" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
+              <i class="fa-solid fa-barcode text-sm"></i> Ler
+            </button>
+          </div>
+        </div>
+
+        <!-- MONITOR -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-semibold text-slate-600">Etiqueta / Monitor (Apenas Números) *</label>
+            <button type="button" onclick="setNotApplicable('machine-monitor')" class="text-[11px] text-amber-600 font-bold hover:underline">⚠️ Não se aplica</button>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="machine-monitor" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')" placeholder="Digite apenas números ou N/A" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-emerald-800">
+            <button type="button" onclick="startScanner('monitor')" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow flex-none">
+              <i class="fa-solid fa-barcode text-sm"></i> Ler
+            </button>
+          </div>
+        </div>
+
+        <!-- SCANNER CONTAINER -->
+        <div id="scanner-container" class="hidden border-2 border-dashed border-blue-400 p-2 rounded-xl bg-slate-50 relative">
+          <div id="reader" class="w-full"></div>
+          <button type="button" onclick="stopScanner()" class="mt-2 w-full bg-red-100 text-red-600 text-xs font-bold py-1.5 rounded-lg">Fechar Leitor</button>
+        </div>
+
+        <!-- MODELO -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-semibold text-slate-600">Modelo / Tipo de Equipamento *</label>
+            <div class="flex gap-2">
+              <button type="button" onclick="removeModelOptionPrompt()" class="text-[11px] text-red-600 font-bold hover:underline">- Remover</button>
+              <button type="button" onclick="addNewModelOption()" class="text-[11px] text-blue-600 font-bold hover:underline">+ Novo</button>
+            </div>
+          </div>
+          <input type="text" id="machine-model" list="model-options" placeholder="Selecione ou digite..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <datalist id="model-options"></datalist>
+        </div>
+
+        <!-- SISTEMA OPERACIONAL -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Sistema Operacional *</label>
+          <select id="machine-os" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-semibold text-blue-900">
+            <option value="Win11">Windows 11 (Prioridade)</option>
+            <option value="Win10">Windows 10</option>
+            <option value="Win7">Windows 7</option>
+            <option value="Win8">Windows 8</option>
+            <option value="Linux">Linux</option>
+            <option value="Não se aplica">Não se aplica</option>
+          </select>
+        </div>
+
+        <!-- ESTADO -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Estado de Funcionamento *</label>
+          <select id="machine-status" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="Operacional">Operacional / Em uso</option>
+            <option value="Manutenção">Em Manutenção</option>
+            <option value="Backup">Backup</option>
+            <option value="Defeito">Com Defeito / Inativo</option>
+            <option value="Novo">Novo / A instalar</option>
+          </select>
+        </div>
+
+        <!-- PERIFÉRICOS -->
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-xs font-semibold text-slate-600"><i class="fa-solid fa-boxes-stacked text-blue-600 mr-1"></i> Periféricos do Conjunto *</label>
+            <div class="flex gap-2">
+              <button type="button" onclick="addNewPeripheralPrompt()" class="text-[11px] text-emerald-600 font-bold hover:underline">+ Adicionar Item</button>
+              <button type="button" onclick="toggleCompleteMachine()" class="text-[11px] text-blue-600 font-bold hover:underline">⚡ Marcar Todos</button>
+            </div>
+          </div>
+          <div id="peripherals-checkboxes-container" class="grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações</label>
+          <textarea id="machine-notes" rows="2" placeholder="Detalhes adicionais..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 flex-none">
+          <button type="button" onclick="closeMachineModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow">Salvar no Servidor</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1227,11 +1372,21 @@
 
     function openAllFoldersModal() {
       renderModalFoldersList(sectors);
+      populateBatchFloorSelect();
       document.getElementById('modal-all-folders').classList.remove('hidden');
     }
 
     function closeAllFoldersModal() {
       document.getElementById('modal-all-folders').classList.add('hidden');
+    }
+
+    function populateBatchFloorSelect() {
+      const select = document.getElementById('batch-move-floor-select');
+      if (!select) return;
+      select.innerHTML = '<option value="">Mover selecionadas para...</option>';
+      floors.forEach(f => {
+        select.innerHTML += `<option value="${f.id}">${f.name}</option>`;
+      });
     }
 
     function renderModalFoldersList(listToRender) {
@@ -1241,6 +1396,7 @@
 
       if (!listToRender || listToRender.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Nenhuma pasta encontrada.</p>`;
+        updateSelectedFoldersCount();
         return;
       }
 
@@ -1255,12 +1411,16 @@
         item.className = "flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-xs cursor-pointer hover:border-indigo-300 transition";
         item.onclick = (e) => {
           if (e.target.closest('button') || e.target.closest('input')) return;
-          closeAllFoldersModal();
-          openSectorItems(sec.id);
+          const chk = item.querySelector('.folder-select-chk');
+          if (chk) {
+            chk.checked = !chk.checked;
+            updateSelectedFoldersCount();
+          }
         };
+
         item.innerHTML = `
           <div class="flex items-center gap-3 flex-1 min-w-0">
-            <input type="checkbox" name="modal-folder-chk" value="${sec.id}" onchange="updateSelectedFoldersCount()" class="rounded text-indigo-600 w-4 h-4 flex-none cursor-pointer">
+            <input type="checkbox" value="${sec.id}" onchange="updateSelectedFoldersCount()" class="folder-select-chk rounded text-indigo-600 w-4 h-4 cursor-pointer flex-none">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background-color: ${sec.color || '#2563eb'}20; color: ${sec.color || '#2563eb'};">
               <i class="fa-solid fa-folder"></i>
             </div>
@@ -1280,56 +1440,52 @@
       updateSelectedFoldersCount();
     }
 
-    function toggleSelectAllModalFolders(checked) {
-      document.querySelectorAll('input[name="modal-folder-chk"]').forEach(chk => {
-        chk.checked = checked;
+    function toggleSelectAllModalFolders(isChecked) {
+      document.querySelectorAll('.folder-select-chk').forEach(chk => {
+        chk.checked = isChecked;
       });
       updateSelectedFoldersCount();
     }
 
     function updateSelectedFoldersCount() {
-      const selected = document.querySelectorAll('input[name="modal-folder-chk"]:checked');
-      const countSpan = document.getElementById('selected-folders-count');
-      if (countSpan) {
-        countSpan.innerText = `${selected.length} selecionada(s)`;
-      }
+      const checkedCount = document.querySelectorAll('.folder-select-chk:checked').length;
+      document.getElementById('selected-folders-count').innerText = `${checkedCount} selecionada(s)`;
     }
 
-    async function openMoveSelectedFoldersModal() {
-      const selectedIds = Array.from(document.querySelectorAll('input[name="modal-folder-chk"]:checked')).map(chk => chk.value);
+    async function executeBatchMoveFolders() {
+      const targetFloorId = document.getElementById('batch-move-floor-select').value;
+      if (!targetFloorId) {
+        alert("⚠️ Selecione um Andar de destino para mover as pastas.");
+        return;
+      }
+
+      const selectedIds = Array.from(document.querySelectorAll('.folder-select-chk:checked')).map(chk => chk.value);
       if (selectedIds.length === 0) {
         alert("⚠️ Selecione pelo menos uma pasta na lista.");
         return;
       }
 
-      const floorOptions = floors.map((f, idx) => `${idx + 1}. ${f.name}`).join('\n');
-      const input = prompt(`Mover ${selectedIds.length} pasta(s) selecionada(s) para qual Andar?\n\nDigite o número correspondente:\n${floorOptions}`);
-      if (!input) return;
-
-      const idxNum = parseInt(input.trim());
-      if (isNaN(idxNum) || idxNum < 1 || idxNum > floors.length) {
-        alert("Andar inválido.");
+      const targetFloor = floors.find(f => f.id === targetFloorId);
+      if (!confirm(`Deseja mover ${selectedIds.length} pasta(s) selecionada(s) para o andar "${targetFloor ? targetFloor.name : ''}"?`)) {
         return;
       }
 
-      const targetFloor = floors[idxNum - 1];
-
-      try {
-        for (const secId of selectedIds) {
-          const { error } = await supabaseClient.from('sectors').update({ floor_id: targetFloor.id }).eq('id', secId);
-          if (!error) {
-            const secObj = sectors.find(s => s.id === secId);
-            if (secObj) secObj.floor_id = targetFloor.id;
-          }
+      let successCount = 0;
+      for (const secId of selectedIds) {
+        const { error } = await supabaseClient.from('sectors').update({ floor_id: targetFloorId }).eq('id', secId);
+        if (!error) {
+          successCount++;
+          const secObj = sectors.find(s => s.id === secId);
+          if (secObj) secObj.floor_id = targetFloorId;
         }
-
-        alert(`✅ ${selectedIds.length} pasta(s) movida(s) com sucesso para o andar "${targetFloor.name}"!`);
-        renderFloorsAndSectors();
-        renderAdminFoldersList();
-        renderModalFoldersList(sectors);
-      } catch (err) {
-        alert("Erro ao mover pastas: " + err.message);
       }
+
+      alert(`✅ Sucesso!\n${successCount} pasta(s) movida(s) para ${targetFloor.name}.`);
+      renderFloorsAndSectors();
+      renderAdminFoldersList();
+      renderModalFoldersList(sectors);
+      document.getElementById('select-all-folders-chk').checked = false;
+      document.getElementById('batch-move-floor-select').value = '';
     }
 
     function filterModalFolders(query) {
@@ -1346,7 +1502,6 @@
       renderModalFoldersList(filtered);
     }
 
-    /* EXPORTAÇÃO COMPLETA DA ESTRUTURA EM ARQUIVO ZIP COM ARQUIVOS .TXT */
     async function exportAllFoldersZip() {
       if (typeof JSZip === 'undefined') { alert("Erro ao carregar módulo ZIP."); return; }
       if (!sectors || sectors.length === 0) { alert("Não existem pastas cadastradas."); return; }
@@ -1397,7 +1552,6 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       link.click();
     }
 
-    /* IMPORTAÇÃO DE ESTRUTURA DE PASTAS E REGISTOS DE MÁQUINAS VIA ZIP */
     async function importFolderStructureZip(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -1938,4 +2092,265 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
 
     function stopScanner() {
       if(html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); }).catch(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.
+        html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); }).catch(() => { html5QrcodeScanner = null; document.getElementById('scanner-container').classList.add('hidden'); });
+      } else { document.getElementById('scanner-container').classList.add('hidden'); }
+    }
+
+    async function handleExcelImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+          if (!rows || rows.length === 0) { alert("Folha vazia."); return; }
+
+          const targetFloorId = currentFloorId;
+          const activeFloor = floors.find(f => f.id === targetFloorId);
+          if (!targetFloorId || !activeFloor) {
+            alert("⚠️ Selecione primeiro um Andar válido na barra de abas.");
+            return;
+          }
+
+          let count = 0;
+          for (const row of rows) {
+            let rawSetor = String(row['SETOR'] || row['Setor'] || 'GERAL').trim();
+            rawSetor = rawSetor.replace(/\s+/g, ' ').toUpperCase();
+            
+            if (rawSetor === 'CLINICA MEDICACORREDOR') rawSetor = 'CLINICA MEDICA CORREDOR';
+
+            const code = cleanOnlyNumbers(row['Etiqueta Gabinete'] || row['GABINETE'] || row['PATRIMÔNIO'] || row['Património'] || row['Código'] || '');
+            const monitor = cleanOnlyNumbers(row['Etiqueta Monitor'] || row['MONITOR'] || row['Monitor'] || '');
+            if (!code || !rawSetor) continue;
+
+            if (machines.some(m => String(m.code).trim().toLowerCase() === code.toLowerCase())) continue;
+
+            let sec = sectors.find(s => s.floor_id === targetFloorId && s.name.toUpperCase() === rawSetor);
+            let sectorId = sec ? sec.id : null;
+
+            if (!sec) {
+              sectorId = 'sec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+              const newSector = { id: sectorId, floor_id: targetFloorId, name: rawSetor, color: '#2563eb' };
+              
+              const { error: secErr } = await supabaseClient.from('sectors').insert([newSector]);
+              if (secErr) { alert("Erro ao criar setor na importação: " + secErr.message); continue; }
+              sectors.push(newSector);
+            }
+
+            const model = String(row['Modelo'] || 'POSITIVO').trim();
+            const os = String(row['SO'] || row['Sistema Operacional'] || 'Win11').trim();
+            const status = String(row['Estado'] || 'Operacional').trim();
+            const notes = String(row['Observações'] || row['Notas'] || '').trim();
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            
+            const ticket = generateTicketFromCode(code);
+
+            const newMachine = {
+              id: 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              sector_id: sectorId, ticket, code, monitor, model, os, status,
+              peripherals: ['Gabinete', 'Monitor'], notes, date: dateStr, timestamp: Date.now()
+            };
+
+            const { error: macErr } = await supabaseClient.from('machines').insert([newMachine]);
+            if (macErr) { alert("Erro ao inserir máquina na importação: " + macErr.message); continue; }
+
+            machines.push(newMachine);
+            count++;
+          }
+
+          alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas na aba "${activeFloor.name}".`);
+          renderFloorsAndSectors();
+          renderAdminFoldersList();
+          renderModalFoldersList(sectors);
+          if (currentSectorId) renderMachines();
+        } catch (err) {
+          alert("Erro ao processar ficheiro: " + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function saveMachine(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-machine-id').value;
+      const code = cleanOnlyNumbers(document.getElementById('machine-code').value);
+      const monitor = cleanOnlyNumbers(document.getElementById('machine-monitor').value);
+      const model = document.getElementById('machine-model').value.trim();
+      const os = document.getElementById('machine-os').value;
+      const status = document.getElementById('machine-status').value;
+      const notes = document.getElementById('machine-notes').value.trim();
+      const peripherals = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
+
+      if (!code) {
+        alert("⚠️ Campo em falta: 'Etiqueta / Gabinete'.");
+        document.getElementById('machine-code').focus();
+        return;
+      }
+
+      const isNotApp = code === 'NÃO SE APLICA';
+      if (!isNotApp) {
+        if (code.length !== 12 || !/^\d+$/.test(code)) {
+          alert("⚠️ O campo do Gabinete deve conter APENAS NÚMEROS e exatamente 12 dígitos (Ex: 991017251100).");
+          document.getElementById('machine-code').focus();
+          return;
+        }
+      }
+
+      if (/^0+$/.test(code)) {
+        alert("⚠️ O campo 'Etiqueta / Gabinete' não pode conter apenas zeros.");
+        document.getElementById('machine-code').focus();
+        return;
+      }
+
+      if (!monitor) {
+        alert("⚠️ Campo em falta: 'Etiqueta / Monitor'.");
+        document.getElementById('machine-monitor').focus();
+        return;
+      }
+
+      if (!model) {
+        alert("⚠️ Campo em falta: 'Modelo / Tipo de Equipamento'.");
+        document.getElementById('machine-model').focus();
+        return;
+      }
+
+      if (!os) {
+        alert("⚠️ Campo em falta: 'Sistema Operacional'.");
+        document.getElementById('machine-os').focus();
+        return;
+      }
+
+      if (!status) {
+        alert("⚠️ Campo em falta: 'Estado de Funcionamento'.");
+        document.getElementById('machine-status').focus();
+        return;
+      }
+
+      if (!peripherals || peripherals.length === 0) {
+        alert("⚠️ Campo em falta: 'Periféricos do Conjunto'. Selecione pelo menos um.");
+        return;
+      }
+
+      const existingMachine = machines.find(m => {
+        if (editId && m.id === editId) return false;
+        return String(m.code || '').trim() === code && !isNotApp;
+      });
+
+      if (existingMachine) {
+        alert(`❌ Atenção: O gabinete/património numérico "${code}" já se encontra cadastrado no sistema!`);
+        document.getElementById('machine-code').focus();
+        return; 
+      }
+
+      const ticket = generateTicketFromCode(code);
+
+      const sec = sectors.find(s => s.id === currentSectorId);
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+
+      if (editId) {
+        const { error } = await supabaseClient.from('machines').update({ ticket, code, monitor, model, os, status, peripherals, notes }).eq('id', editId);
+        if (error) { alert("Erro ao atualizar máquina: " + error.message); return; }
+
+        const m = machines.find(item => item.id === editId);
+        if(m) {
+          m.ticket = ticket; m.code = code; m.monitor = monitor; m.model = model; m.os = os; m.status = status;
+          m.peripherals = peripherals; m.notes = notes;
+        }
+      } else {
+        const newMachine = {
+          id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
+          date: dateStr, timestamp: Date.now()
+        };
+
+        const { error } = await supabaseClient.from('machines').insert([newMachine]);
+        if (error) { alert("Erro ao salvar máquina no servidor: " + error.message); return; }
+
+        machines.push(newMachine);
+      }
+
+      closeMachineModal();
+      if (currentSectorId) {
+        openSectorItems(currentSectorId);
+      } else {
+        renderFloorsAndSectors();
+      }
+    }
+
+    async function deleteMachine(id) {
+      if(confirm("Remover esta máquina?")) {
+        const { error } = await supabaseClient.from('machines').delete().eq('id', id);
+        if (error) { alert("Erro ao excluir máquina: " + error.message); return; }
+
+        machines = machines.filter(m => m.id !== id);
+        
+        if (currentSectorId) {
+          renderMachines();
+        } else {
+          renderFloorsAndSectors();
+          const searchInput = document.getElementById('global-search');
+          if (searchInput && searchInput.value.trim()) {
+            handleGlobalSearch(searchInput.value);
+          }
+        }
+        updateDashboardStats();
+      }
+    }
+
+    function openExportModal() {
+      if (sectors.length === 0) { alert("Não existem setores."); return; }
+      const container = document.getElementById('export-sectors-checkboxes');
+      container.innerHTML = '';
+      sectors.forEach(sec => {
+        const floor = floors.find(f => f.id === sec.floor_id);
+        const labelName = (floor ? floor.name + ' - ' : '') + sec.name;
+        container.innerHTML += `<label class="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-100 rounded"><input type="checkbox" name="export-sector-chk" value="${sec.id}" checked class="rounded text-blue-600 w-4 h-4"><span class="font-medium text-slate-700">${labelName}</span></label>`;
+      });
+      document.getElementById('modal-export').classList.remove('hidden');
+    }
+    function closeExportModal() { document.getElementById('modal-export').classList.add('hidden'); }
+    function toggleSelectAllExport(status) {
+      document.querySelectorAll('input[name="export-sector-chk"]').forEach(chk => chk.checked = status);
+    }
+
+    function generateAndDownloadCSV() {
+      const selectedSectorIds = Array.from(document.querySelectorAll('input[name="export-sector-chk"]:checked')).map(chk => chk.value);
+      if (selectedSectorIds.length === 0) { alert("Selecione pelo menos um setor."); return; }
+      const filtered = machines.filter(m => selectedSectorIds.includes(m.sector_id));
+      
+      let fileContent = "\uFEFFAndar\tSetor\tNº Ticket\tEtiqueta Gabinete\tEtiqueta Monitor\tModelo\tSO\tEstado\tPeriféricos\tObservações\tData\n";
+      filtered.forEach(m => {
+        const sec = sectors.find(s => s.id === m.sector_id);
+        const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
+        fileContent += `${floor ? floor.name.toUpperCase() : 'GERAL'}\t${sec ? sec.name.toUpperCase() : 'GERAL'}\t${m.ticket}\t${m.code || ''}\t${m.monitor || ''}\t${m.model}\t${m.os}\t${m.status}\t${m.peripherals ? m.peripherals.join(', ') : ''}\t${m.notes}\t${m.date}\n`;
+      });
+      const blob = new Blob([fileContent], { type: 'tab-separated-values;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `InfraGest_Relatorio_${new Date().toISOString().slice(0, 10)}.xls`;
+      link.click();
+      closeExportModal();
+    }
+
+    async function loadAuditLogs() {
+      const container = document.getElementById('audit-logs-list');
+      if(!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">A carregar...</p>';
+      let data = [];
+      if (supabaseClient && navigator.onLine) {
+        const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+        data = res.data || [];
+      }
+      container.innerHTML = data.length === 0 ? '<p class="text-xs text-slate-400 text-center py-2">Sem registos.</p>' : '';
+      data.forEach(log => {
+        container.innerHTML += `<div class="bg-slate-50 p-2.5 rounded-lg border text-xs"><span class="font-bold text-blue-700">${log.user_action}</span><p>${log.details}</p></div>`;
+      });
+    }
+  </script>
+</body>
+</html>
