@@ -305,6 +305,29 @@
     </button>
   </nav>
 
+  <!-- MODAL: SELETOR DE PASTAS COM PESQUISA INSTANTÂNEA -->
+  <div id="modal-select-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50 flex-none">
+        <h3 id="select-folder-modal-title" class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-folder-tree mr-1.5 text-indigo-600"></i> Selecionar Setor / Pasta</h3>
+        <button onclick="closeSelectFolderModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div class="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2 flex-none">
+        <div class="relative flex-1">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" id="interactive-folder-search" oninput="filterInteractiveFolders(this.value)" placeholder="Digite para filtrar por andar ou nome da pasta..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+        </div>
+      </div>
+
+      <div id="interactive-folders-list" class="p-4 space-y-2 overflow-y-auto flex-1 text-xs"></div>
+
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end">
+        <button type="button" onclick="closeSelectFolderModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: LISTAGEM COMPLETA DE TODAS AS PASTAS COM SELEÇÃO MÚLTIPLA E AÇÕES EM LOTE -->
   <div id="modal-all-folders" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -738,6 +761,7 @@
     let html5QrcodeScanner = null;
     let activeScannerTarget = 'code';
     let currentUser = null;
+    let interactiveFolderCallback = null;
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -875,7 +899,7 @@
         const currentSelected = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
         currentSelected.push(formatted);
         renderPeripheralsCheckboxes(currentSelected);
-      } else { alert("Este periférico já existe."); }
+      } else { alert(" Este periférico já existe."); }
     }
 
     function removePeripheralItem(itemToRemove) {
@@ -1217,35 +1241,93 @@
       renderMachines();
     }
 
+    // NOVA FUNÇÃO INTERATIVA PARA SELECIONAR SETOR COM PESQUISA EM TEMPO REAL
+    function openInteractiveFolderSelector(title, callback) {
+      interactiveFolderCallback = callback;
+      document.getElementById('select-folder-modal-title').innerHTML = `<i class="fa-solid fa-folder-tree mr-1.5 text-indigo-600"></i> ${title}`;
+      document.getElementById('interactive-folder-search').value = '';
+      renderInteractiveFoldersList(sectors);
+      document.getElementById('modal-select-folder').classList.remove('hidden');
+      setTimeout(() => document.getElementById('interactive-folder-search').focus(), 100);
+    }
+
+    function closeSelectFolderModal() {
+      document.getElementById('modal-select-folder').classList.add('hidden');
+      interactiveFolderCallback = null;
+    }
+
+    function filterInteractiveFolders(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        renderInteractiveFoldersList(sectors);
+        return;
+      }
+      const filtered = sectors.filter(s => {
+        const floor = floors.find(f => f.id === s.floor_id);
+        const floorName = floor ? floor.name.toLowerCase() : '';
+        return s.name.toLowerCase().includes(q) || floorName.includes(q);
+      });
+      renderInteractiveFoldersList(filtered);
+    }
+
+    function renderInteractiveFoldersList(listToRender) {
+      const container = document.getElementById('interactive-folders-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!listToRender || listToRender.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Nenhum setor ou andar encontrado.</p>`;
+        return;
+      }
+
+      const sortedSectors = [...listToRender].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'accent' }));
+
+      sortedSectors.forEach((sec, idx) => {
+        const floor = floors.find(f => f.id === sec.floor_id);
+        const floorName = floor ? floor.name : 'Desconhecido';
+        const count = machines.filter(m => m.sector_id === sec.id).length;
+
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/50 transition";
+        item.onclick = () => {
+          const cb = interactiveFolderCallback;
+          closeSelectFolderModal();
+          if (cb) cb(sec);
+        };
+
+        item.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <span class="font-mono font-bold text-slate-400 text-xs w-6 text-right">${idx + 1}.</span>
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background-color: ${sec.color || '#2563eb'}20; color: ${sec.color || '#2563eb'};">
+              <i class="fa-solid fa-folder"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h4 class="font-bold text-slate-800 truncate">${sec.name}</h4>
+              <p class="text-[10px] text-indigo-700 font-semibold">${floorName}</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-extrabold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full flex-none ml-2">${count} máq.</span>
+        `;
+        container.appendChild(item);
+      });
+    }
+
     async function openMoveMachineModal(machineId) {
       const m = machines.find(item => item.id === machineId);
       if (!m) return;
 
-      const sectorOptions = sectors.map((s, idx) => {
-        const fl = floors.find(f => f.id === s.floor_id);
-        return `${idx + 1}. ${(fl ? fl.name + ' > ' : '')}${s.name}`;
-      }).join('\n');
+      openInteractiveFolderSelector(`Mover máquina (${m.code}) para...`, async (targetSector) => {
+        const newTicket = generateTicketFromCode(m.code);
 
-      const input = prompt(`Selecione o número do novo setor para onde deseja mover a máquina (${m.code}):\n\n${sectorOptions}`);
-      if (!input) return;
+        const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id, ticket: newTicket }).eq('id', machineId);
+        if (error) { alert("Erro ao mover máquina no servidor: " + error.message); return; }
 
-      const idxNum = parseInt(input.trim());
-      if (isNaN(idxNum) || idxNum < 1 || idxNum > sectors.length) {
-        alert("Opção inválida.");
-        return;
-      }
-
-      const targetSector = sectors[idxNum - 1];
-      const newTicket = generateTicketFromCode(m.code);
-
-      const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id, ticket: newTicket }).eq('id', machineId);
-      if (error) { alert("Erro ao mover máquina no servidor: " + error.message); return; }
-
-      m.sector_id = targetSector.id;
-      m.ticket = newTicket;
-      alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name} (Ticket: ${newTicket})`);
-      renderFloorsAndSectors();
-      if (currentSectorId) renderMachines();
+        m.sector_id = targetSector.id;
+        m.ticket = newTicket;
+        alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name} (Ticket: ${newTicket})`);
+        renderFloorsAndSectors();
+        if (currentSectorId) renderMachines();
+      });
     }
 
     function handleGlobalSearch(query) {
