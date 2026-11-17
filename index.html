@@ -1964,31 +1964,29 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
     function closeUserModal() { document.getElementById('modal-user').classList.add('hidden'); }
 
     async function saveUser(e) {
-      e.preventDefault();
-      const username = document.getElementById('modal-username').value.trim();
-      const password = document.getElementById('modal-password').value.trim();
-      const newUser = { id: 'usr_' + Date.now(), username, password, role: 'technician' };
-      
-      const { error } = await supabaseClient.from('users').insert([newUser]);
-      if (error) { alert("Erro ao salvar utilizador: " + error.message); return; }
+  e.preventDefault();
+  const username = document.getElementById('modal-username').value.trim();
+  const password = document.getElementById('modal-password').value.trim();
+  const role = document.getElementById('modal-role').value; // Captura o valor correto do select (admin ou technician)
 
-      usersList.push(newUser);
-      await recordAuditLog('Registo de Utilizador', `Criou o novo utilizador "${username}"`);
-      closeUserModal();
-      loadUsersManagement();
-    }
+  const newUser = { 
+    id: 'usr_' + Date.now(), 
+    username, 
+    password, 
+    role: role // Utiliza o perfil selecionado no modal
+  };
+  
+  const { error } = await supabaseClient.from('users').insert([newUser]);
+  if (error) { 
+    alert("Erro ao salvar utilizador: " + error.message); 
+    return; 
+  }
 
-    async function deleteUser(id, username) {
-      if (username === 'admin') { alert("Não pode remover o admin principal."); return; }
-      if (confirm(`Remover ${username}?`)) {
-        const { error } = await supabaseClient.from('users').delete().eq('id', id);
-        if (error) { alert("Erro ao remover utilizador: " + error.message); return; }
-
-        usersList = usersList.filter(u => u.id !== id);
-        await recordAuditLog('Remoção de Utilizador', `Removeu o utilizador "${username}"`);
-        loadUsersManagement();
-      }
-    }
+  usersList.push(newUser);
+  await recordAuditLog('Registo de Utilizador', `Criou o novo utilizador "${username}" com perfil ${role.toUpperCase()}`);
+  closeUserModal();
+  loadUsersManagement();
+}
 
     async function addNewFloorPrompt() {
       const floorName = prompt("Digite o nome da nova aba/andar (ex: 2º Andar, Subsolo, etc.):");
