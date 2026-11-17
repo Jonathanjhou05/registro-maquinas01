@@ -718,7 +718,7 @@
     let activeScannerTarget = 'code';
     let currentUser = null;
     let interactiveFolderCallback = null;
-    let currentViewingMachineId = null; // ID da máquina atualmente aberta no modal de detalhes
+    let currentViewingMachineId = null;
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -740,7 +740,7 @@
       document.getElementById('view-login').classList.remove('hidden');
     };
 
-    // FUNÇÕES DE LOG E HISTÓRICO ESPECÍFICO DE MÁQUINAS E AUDITORIA GERAL
+    // FUNÇÕES DE AUDITORIA E HISTÓRICO PROTEGIDAS POR TRY/CATCH
     async function recordAuditLog(action, details) {
       if (!supabaseClient) return;
       try {
@@ -753,7 +753,7 @@
         };
         await supabaseClient.from('audit_logs').insert([logEntry]);
       } catch (e) {
-        console.error("Erro ao gravar log geral:", e);
+        console.error("Erro ao gravar log geral (offline ou erro de rede):", e);
       }
     }
 
@@ -927,9 +927,13 @@
 
     function initRealtimeSubscription() {
       if (!supabaseClient) return;
-      supabaseClient.channel('public-db-changes').on('postgres_changes', { event: '*', schema: 'public' }, async () => {
-        await loadDataFromServer();
-      }).subscribe();
+      try {
+        supabaseClient.channel('public-db-changes').on('postgres_changes', { event: '*', schema: 'public' }, async () => {
+          await loadDataFromServer();
+        }).subscribe();
+      } catch (e) {
+        console.error("Erro no canal realtime:", e);
+      }
     }
 
     function openSyncOptionsModal() {
@@ -1162,7 +1166,7 @@
         if (currentSectorId) renderMachines();
         renderAdminFoldersList();
       } catch (err) {
-        console.error(err);
+        console.error("Erro ao carregar dados do servidor:", err);
       }
     }
 
@@ -1866,8 +1870,9 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
           const obsMatch = fileTxt.match(/Observações:\s*\n([\s\S]*?)\n=/i);
           const notes = obsMatch ? obsMatch[1].trim() : '';
 
+          const newMachineId = 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
           const newMachine = {
-            id: 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            id: newMachineId,
             sector_id: sectorObj.id, ticket, code, monitor, model, os, status, peripherals, notes,
             date: dateStr, timestamp: Date.now()
           };
@@ -1876,7 +1881,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
           if (!mErr) { 
             machines.push(newMachine); 
             importedMachines++;
-            await recordMachineHistory(newMachine.id, 'Criação', 'Importado via pacote ZIP');
+            await recordMachineHistory(newMachineId, 'Criação', 'Importado via pacote ZIP');
           }
         }
 
@@ -2349,7 +2354,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
 
     function openMachineDetails(machineId) {
       currentViewingMachineId = machineId;
-      switchMachineModalTab('details'); // Sempre abre na aba de detalhes por defeito
+      switchMachineModalTab('details');
 
       const m = machines.find(item => item.id === machineId);
       if (!m) return;
@@ -2490,9 +2495,10 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
             const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             
             const ticket = generateTicketFromCode(code);
+            const newMachineId = 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
 
             const newMachine = {
-              id: 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              id: newMachineId,
               sector_id: sectorId, ticket, code, monitor, model, os, status,
               peripherals: ['Gabinete', 'Monitor'], notes, date: dateStr, timestamp: Date.now()
             };
@@ -2501,7 +2507,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
             if (macErr) { alert("Erro ao inserir máquina na importação: " + macErr.message); continue; }
 
             machines.push(newMachine);
-            await recordMachineHistory(newMachine.id, 'Criação', 'Registo importado via Excel');
+            await recordMachineHistory(newMachineId, 'Criação', 'Registo importado via Excel');
             count++;
           }
 
@@ -2619,7 +2625,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         await recordMachineHistory(editId, 'Modificação', descChanges);
         await recordAuditLog('Atualização de Máquina', `Atualizou máquina Gabinete: ${code} (Ticket: ${ticket})`);
       } else {
-        const newId = 'mac_' + Date.now();
+        const newId = 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
         const newMachine = {
           id: newId, sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
           date: dateStr, timestamp: Date.now()
@@ -2705,8 +2711,12 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">A carregar...</p>';
       let data = [];
       if (supabaseClient && navigator.onLine) {
-        const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
-        data = res.data || [];
+        try {
+          const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
+          data = res.data || [];
+        } catch (e) {
+          console.error("Erro ao carregar auditoria:", e);
+        }
       }
       container.innerHTML = data.length === 0 ? '<p class="text-xs text-slate-400 text-center py-2">Sem registos de auditoria.</p>' : '';
       data.forEach(log => {
