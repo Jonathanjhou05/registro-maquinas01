@@ -26,7 +26,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- SheetJS (XLSX Parser) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- JSZip Library para exportação e leitura de arquivos ZIP -->
+  <!-- JSZip Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
@@ -246,7 +246,7 @@
 
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
           <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria</h3>
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria (Logs de Utilizadores)</h3>
             <button onclick="loadAuditLogs()" class="text-xs text-blue-600 font-semibold"><i class="fa-solid fa-rotate"></i> Atualizar</button>
           </div>
           <div id="audit-logs-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
@@ -305,7 +305,7 @@
     </button>
   </nav>
 
-  <!-- MODAL: SELETOR DE PASTAS COM PESQUISA INSTANTÂNEA -->
+  <!-- MODAL: SELETOR DE PASTAS -->
   <div id="modal-select-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50 flex-none">
@@ -328,7 +328,7 @@
     </div>
   </div>
 
-  <!-- MODAL: LISTAGEM COMPLETA DE TODAS AS PASTAS COM SELEÇÃO MÚLTIPLA E AÇÕES EM LOTE -->
+  <!-- MODAL: TODAS AS PASTAS -->
   <div id="modal-all-folders" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50 flex-none">
@@ -349,7 +349,6 @@
         </label>
       </div>
 
-      <!-- BARRA DE AÇÕES EM LOTE (MOVER, EXCLUIR SELECIONADAS E LIMPAR VAZIAS) -->
       <div class="bg-indigo-50 px-4 py-2.5 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2 flex-none">
         <div class="flex items-center gap-2">
           <input type="checkbox" id="select-all-folders-chk" onchange="toggleSelectAllModalFolders(this.checked)" class="rounded text-indigo-600 w-4 h-4 cursor-pointer">
@@ -362,11 +361,9 @@
           <button type="button" onclick="executeBatchMoveFolders()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap">
             Mover
           </button>
-          <!-- BOTÃO DE EXCLUIR SELECIONADAS -->
           <button type="button" onclick="executeBatchDeleteFolders()" title="Excluir pastas selecionadas e seus itens" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1">
             <i class="fa-solid fa-trash-can"></i> Excluir
           </button>
-          <!-- BOTÃO DE LIMPEZA AUTOMÁTICA -->
           <button type="button" onclick="executeAutoCleanup()" title="Limpar automaticamente pastas vazias e órfãs" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1">
             <i class="fa-solid fa-broom"></i> Vazias
           </button>
@@ -525,7 +522,7 @@
     </div>
   </div>
 
-  <!-- MODAL: MACHINE DETAILS & PRINT TICKET -->
+  <!-- MODAL: MACHINE DETAILS -->
   <div id="modal-machine-details" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none bg-blue-50">
@@ -783,6 +780,23 @@
       document.getElementById('view-login').classList.remove('hidden');
     };
 
+    // FUNÇÃO DE AUDITORIA DE LOGS COM IDENTIFICAÇÃO DO UTILIZADOR
+    async function recordAuditLog(action, details) {
+      if (!supabaseClient) return;
+      try {
+        const userName = currentUser ? currentUser.username : 'Sistema/Anónimo';
+        const logEntry = {
+          id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          user_action: `${userName} - ${action}`,
+          details: details,
+          created_at: new Date().toISOString()
+        };
+        await supabaseClient.from('audit_logs').insert([logEntry]);
+      } catch (e) {
+        console.error("Erro ao gravar log de auditoria:", e);
+      }
+    }
+
     function cleanOnlyNumbers(str) {
       if (!str) return '';
       const upper = String(str).trim().toUpperCase();
@@ -899,7 +913,7 @@
         const currentSelected = Array.from(document.querySelectorAll('input[name="peripherals"]:checked')).map(chk => chk.value);
         currentSelected.push(formatted);
         renderPeripheralsCheckboxes(currentSelected);
-      } else { alert(" Este periférico já existe."); }
+      } else { alert("Este periférico já existe."); }
     }
 
     function removePeripheralItem(itemToRemove) {
@@ -1214,6 +1228,7 @@
         }
       }
 
+      await recordAuditLog('Recálculo de Tickets', `Recalculou os tickets do setor "${sec.name}" (${updatedCount} itens atualizados).`);
       alert(`✅ Correção concluída!\n${updatedCount} registos atualizados para a regra da 6ª à 10ª casa.`);
       renderMachines();
     }
@@ -1241,7 +1256,6 @@
       renderMachines();
     }
 
-    // NOVA FUNÇÃO INTERATIVA PARA SELECIONAR SETOR COM PESQUISA EM TEMPO REAL
     function openInteractiveFolderSelector(title, callback) {
       interactiveFolderCallback = callback;
       document.getElementById('select-folder-modal-title').innerHTML = `<i class="fa-solid fa-folder-tree mr-1.5 text-indigo-600"></i> ${title}`;
@@ -1324,6 +1338,7 @@
 
         m.sector_id = targetSector.id;
         m.ticket = newTicket;
+        await recordAuditLog('Movimentação de Máquina', `Moveu o equipamento Gabinete: ${m.code} para o setor "${targetSector.name}"`);
         alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name} (Ticket: ${newTicket})`);
         renderFloorsAndSectors();
         if (currentSectorId) renderMachines();
@@ -1589,6 +1604,7 @@
         }
       }
 
+      await recordAuditLog('Mover Pastas em Lote', `Moveu ${successCount} pastas para o andar "${targetFloor.name}"`);
       alert(`✅ Sucesso!\n${successCount} pasta(s) movida(s) para ${targetFloor.name}.`);
       renderFloorsAndSectors();
       renderAdminFoldersList();
@@ -1618,6 +1634,7 @@
         }
       }
 
+      await recordAuditLog('Exclusão de Pastas em Lote', `Excluiu ${deletedCount} pastas em lote.`);
       alert(`✅ Sucesso!\n${deletedCount} pasta(s) e seus registos foram excluídos.`);
       renderFloorsAndSectors();
       renderAdminFoldersList();
@@ -1667,6 +1684,7 @@
         }
       }
 
+      await recordAuditLog('Limpeza Automática', `Removeu ${deletedSectorsCount} pastas vazias e ${deletedMachinesCount} máquinas órfãs.`);
       alert(`✅ Limpeza concluída com sucesso!\n• Pastas vazias removidas: ${deletedSectorsCount}\n• Máquinas órfãs removidas: ${deletedMachinesCount}`);
       renderFloorsAndSectors();
       renderAdminFoldersList();
@@ -1691,6 +1709,7 @@
       link.href = URL.createObjectURL(blob);
       link.download = `InfraGest_BackupDB_${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
+      recordAuditLog('Exportação Backup JSON', 'Exportou uma cópia de segurança completa do banco de dados.');
     }
 
     async function importDatabaseJson(event) {
@@ -1728,16 +1747,7 @@
             }
           }
 
-          if (parsed.customPeripherals && Array.isArray(parsed.customPeripherals)) {
-            customPeripheralsList = Array.from(new Set([...customPeripheralsList, ...parsed.customPeripherals]));
-            saveCustomPeripheralsToStorage();
-          }
-
-          if (parsed.customModels && Array.isArray(parsed.customModels)) {
-            customModelsList = Array.from(new Set([...customModelsList, ...parsed.customModels]));
-            saveCustomModelsToStorage();
-          }
-
+          await recordAuditLog('Restauração de Backup', `Restaurou dados via JSON (${parsed.machines.length} máquinas).`);
           await loadDataFromServer();
           alert("✅ Banco de dados restaurado e sincronizado com sucesso!");
 
@@ -1812,6 +1822,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       link.href = URL.createObjectURL(content);
       link.download = `InfraGest_Estrutura_Pastas_${new Date().toISOString().slice(0, 10)}.zip`;
       link.click();
+      recordAuditLog('Exportação ZIP', 'Exportou o arquivo ZIP contendo toda a estrutura de pastas e fichas.');
     }
 
     async function importFolderStructureZip(event) {
@@ -1882,6 +1893,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
           if (!mErr) { machines.push(newMachine); importedMachines++; }
         }
 
+        await recordAuditLog('Importação de ZIP', `Importou pacote ZIP (${importedMachines} máquinas).`);
         alert(`✅ Importação concluída com sucesso!\n\n• Novas Abas/Andares: ${createdFloors}\n• Novas Pastas/Setores: ${createdSectors}\n• Máquinas Importadas: ${importedMachines}`);
         renderFloorsAndSectors();
         renderAdminFoldersList();
@@ -1911,6 +1923,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       link.href = URL.createObjectURL(blob);
       link.download = `InfraGest_Lista_Pastas_${new Date().toISOString().slice(0, 10)}.xls`;
       link.click();
+      recordAuditLog('Exportação de Lista de Pastas', 'Exportou a lista de pastas para Excel.');
     }
 
     async function loadUsersManagement() {
@@ -1946,6 +1959,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       if (error) { alert("Erro ao salvar utilizador: " + error.message); return; }
 
       usersList.push(newUser);
+      await recordAuditLog('Registo de Utilizador', `Criou o novo utilizador "${username}"`);
       closeUserModal();
       loadUsersManagement();
     }
@@ -1957,6 +1971,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         if (error) { alert("Erro ao remover utilizador: " + error.message); return; }
 
         usersList = usersList.filter(u => u.id !== id);
+        await recordAuditLog('Remoção de Utilizador', `Removeu o utilizador "${username}"`);
         loadUsersManagement();
       }
     }
@@ -1974,12 +1989,14 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
 
       floors.push(newFloor);
       currentFloorId = newId;
+      await recordAuditLog('Criação de Andar', `Criou o novo andar/aba "${formatted}"`);
       renderFloorsAndSectors();
     }
 
     async function editCurrentFloor() {
       const f = floors.find(x => x.id === currentFloorId);
       if(!f) return;
+      const oldName = f.name;
       const newName = prompt("Renomear andar/aba:", f.name);
       if (!newName || !newName.trim()) return;
 
@@ -1987,6 +2004,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       if (error) { alert("Erro ao renomear andar: " + error.message); return; }
 
       f.name = newName.trim();
+      await recordAuditLog('Renomeação de Andar', `Alterou o nome do andar de "${oldName}" para "${f.name}"`);
       renderFloorsAndSectors();
     }
 
@@ -2009,6 +2027,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         machines = machines.filter(m => !sectorIdsToDelete.includes(m.sector_id));
 
         currentFloorId = floors[0].id;
+        await recordAuditLog('Exclusão de Andar', `Eliminou o andar "${f.name}"`);
         renderFloorsAndSectors();
       }
     }
@@ -2123,6 +2142,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
 
         const sectorObj = sectors.find(s => s.id === id);
         if(sectorObj) { sectorObj.name = name; sectorObj.floor_id = floor_id; sectorObj.color = color; }
+        await recordAuditLog('Edição de Setor', `Atualizou a pasta/setor para "${name}"`);
       } else {
         const newId = 'sec_' + Date.now();
         const sectorObj = { id: newId, floor_id, name, color };
@@ -2131,6 +2151,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         if (error) { alert("Erro ao criar setor no servidor: " + error.message); return; }
 
         sectors.push(sectorObj);
+        await recordAuditLog('Criação de Setor', `Criou a nova pasta/setor "${name}"`);
       }
 
       closeFolderModal();
@@ -2158,13 +2179,15 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
     }
 
     async function deleteFolder(id) {
-      if(confirm("Excluir este setor e todas as máquinas associadas a ele?")) {
+      const sec = sectors.find(s => s.id === id);
+      if(confirm(`Excluir o setor "${sec ? sec.name : ''}" e todas as máquinas associadas a ele?`)) {
         const { error } = await supabaseClient.from('sectors').delete().eq('id', id);
         if (error) { alert("Erro ao excluir setor: " + error.message); return; }
 
         sectors = sectors.filter(s => s.id !== id);
         machines = machines.filter(m => m.sector_id !== id);
         
+        await recordAuditLog('Exclusão de Setor', `Excluiu o setor "${sec ? sec.name : id}" e seus itens`);
         renderFloorsAndSectors();
         renderAdminFoldersList();
         renderModalFoldersList(sectors);
@@ -2426,6 +2449,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
             count++;
           }
 
+          await recordAuditLog('Importação Excel', `Importou ${count} máquinas via folha Excel.`);
           alert(`Importação concluída com sucesso!\nForam gravadas ${count} máquinas na aba "${activeFloor.name}".`);
           renderFloorsAndSectors();
           renderAdminFoldersList();
@@ -2513,8 +2537,6 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       }
 
       const ticket = generateTicketFromCode(code);
-
-      const sec = sectors.find(s => s.id === currentSectorId);
       const now = new Date();
       const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
@@ -2527,6 +2549,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
           m.ticket = ticket; m.code = code; m.monitor = monitor; m.model = model; m.os = os; m.status = status;
           m.peripherals = peripherals; m.notes = notes;
         }
+        await recordAuditLog('Atualização de Máquina', `Atualizou os dados da máquina Gabinete: ${code} (Ticket: ${ticket})`);
       } else {
         const newMachine = {
           id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
@@ -2537,6 +2560,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         if (error) { alert("Erro ao salvar máquina no servidor: " + error.message); return; }
 
         machines.push(newMachine);
+        await recordAuditLog('Registo de Máquina', `Cadastrou nova máquina Gabinete: ${code} (Ticket: ${ticket})`);
       }
 
       closeMachineModal();
@@ -2548,11 +2572,13 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
     }
 
     async function deleteMachine(id) {
-      if(confirm("Remover esta máquina?")) {
+      const m = machines.find(item => item.id === id);
+      if(confirm(`Remover a máquina ${m ? m.code : ''}?`)) {
         const { error } = await supabaseClient.from('machines').delete().eq('id', id);
         if (error) { alert("Erro ao excluir máquina: " + error.message); return; }
 
         machines = machines.filter(m => m.id !== id);
+        await recordAuditLog('Exclusão de Máquina', `Excluiu a máquina Gabinete: ${m ? m.code : id}`);
         
         if (currentSectorId) {
           renderMachines();
@@ -2599,6 +2625,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       link.href = URL.createObjectURL(blob);
       link.download = `InfraGest_Relatorio_${new Date().toISOString().slice(0, 10)}.xls`;
       link.click();
+      recordAuditLog('Exportação Relatório Excel', 'Exportou relatório de máquinas em Excel.');
       closeExportModal();
     }
 
@@ -2611,9 +2638,17 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         const res = await supabaseClient.from('audit_logs').select('*').order('created_at', { ascending: false });
         data = res.data || [];
       }
-      container.innerHTML = data.length === 0 ? '<p class="text-xs text-slate-400 text-center py-2">Sem registos.</p>' : '';
+      container.innerHTML = data.length === 0 ? '<p class="text-xs text-slate-400 text-center py-2">Sem registos de auditoria.</p>' : '';
       data.forEach(log => {
-        container.innerHTML += `<div class="bg-slate-50 p-2.5 rounded-lg border text-xs"><span class="font-bold text-blue-700">${log.user_action}</span><p>${log.details}</p></div>`;
+        const timeFormatted = new Date(log.created_at).toLocaleString('pt-PT');
+        container.innerHTML += `
+          <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-blue-700">${log.user_action}</span>
+              <span class="text-[10px] text-slate-400">${timeFormatted}</span>
+            </div>
+            <p class="text-slate-600">${log.details}</p>
+          </div>`;
       });
     }
   </script>
