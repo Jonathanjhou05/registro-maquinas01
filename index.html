@@ -1203,7 +1203,8 @@
           const { error } = await supabaseClient.from('machines').update({ 
             code: cleanedCode, 
             monitor: cleanedMonitor, 
-            ticket: newTicket 
+            ticket: newTicket,
+            updated_at: new Date().toISOString()
           }).eq('id', m.id);
 
           if (!error) {
@@ -1319,7 +1320,7 @@
         const oldSec = sectors.find(s => s.id === m.sector_id);
         const newTicket = generateTicketFromCode(m.code);
 
-        const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id, ticket: newTicket }).eq('id', machineId);
+        const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id, ticket: newTicket, updated_at: new Date().toISOString() }).eq('id', machineId);
         if (error) { alert("Erro ao mover máquina no servidor: " + error.message); return; }
 
         m.sector_id = targetSector.id;
@@ -2604,6 +2605,19 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
 
       if (editId) {
         const oldMachine = machines.find(item => item.id === editId);
+        
+        // Optimistic Locking: verificar se a máquina foi modificada no servidor entretanto
+        if (oldMachine && oldMachine.updated_at) {
+          try {
+            const { data: latestCheck } = await supabaseClient.from('machines').select('updated_at').eq('id', editId).single();
+            if (latestCheck && latestCheck.updated_at && new Date(latestCheck.updated_at) > new Date(oldMachine.updated_at)) {
+              alert("⚠️ Conflito de concorrência: Este equipamento foi modificado por outro técnico recentemente. Recarregue os dados antes de salvar.");
+              await loadDataFromServer();
+              return;
+            }
+          } catch(e) {}
+        }
+
         let changesSummary = [];
         if (oldMachine) {
           if (oldMachine.status !== status) changesSummary.push(`Estado: ${oldMachine.status} ➔ ${status}`);
@@ -2614,21 +2628,23 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         }
         const descChanges = changesSummary.length > 0 ? changesSummary.join(' | ') : 'Atualizou dados gerais do equipamento';
 
-        const { error } = await supabaseClient.from('machines').update({ ticket, code, monitor, model, os, status, peripherals, notes }).eq('id', editId);
+        const newTimestampISO = new Date().toISOString();
+        const { error } = await supabaseClient.from('machines').update({ ticket, code, monitor, model, os, status, peripherals, notes, updated_at: newTimestampISO }).eq('id', editId);
         if (error) { alert("Erro ao atualizar máquina: " + error.message); return; }
 
         if(oldMachine) {
           oldMachine.ticket = ticket; oldMachine.code = code; oldMachine.monitor = monitor; oldMachine.model = model; oldMachine.os = os; oldMachine.status = status;
-          oldMachine.peripherals = peripherals; oldMachine.notes = notes;
+          oldMachine.peripherals = peripherals; oldMachine.notes = notes; oldMachine.updated_at = newTimestampISO;
         }
 
         await recordMachineHistory(editId, 'Modificação', descChanges);
         await recordAuditLog('Atualização de Máquina', `Atualizou máquina Gabinete: ${code} (Ticket: ${ticket})`);
       } else {
         const newId = 'mac_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+        const newTimestampISO = new Date().toISOString();
         const newMachine = {
           id: newId, sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
-          date: dateStr, timestamp: Date.now()
+          date: dateStr, timestamp: Date.now(), updated_at: newTimestampISO
         };
 
         const { error } = await supabaseClient.from('machines').insert([newMachine]);
