@@ -227,7 +227,6 @@
       </div>
 
       <div id="admin-panel" class="space-y-4">
-        <!-- PAINEL DE GESTÃO E LISTAGEM DE TODAS AS PASTAS/SETORES -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
           <div class="flex justify-between items-center border-b pb-2">
             <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-folder-tree mr-1 text-indigo-600"></i> Todas as Pastas & Setores Cadastrados</h3>
@@ -246,7 +245,7 @@
 
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
           <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria (Logs de Utilizadores)</h3>
+            <h3 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-list-check mr-1 text-blue-600"></i> Histórico de Auditoria Geral</h3>
             <button onclick="loadAuditLogs()" class="text-xs text-blue-600 font-semibold"><i class="fa-solid fa-rotate"></i> Atualizar</button>
           </div>
           <div id="audit-logs-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
@@ -267,7 +266,6 @@
         </button>
       </div>
 
-      <!-- PAINEL DE BACKUP E RESTAURAÇÃO JSON -->
       <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
         <h3 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-sm">
           <i class="fa-solid fa-database text-purple-600"></i> Backup & Restauração (JSON)
@@ -312,16 +310,13 @@
         <h3 id="select-folder-modal-title" class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-folder-tree mr-1.5 text-indigo-600"></i> Selecionar Setor / Pasta</h3>
         <button onclick="closeSelectFolderModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      
       <div class="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2 flex-none">
         <div class="relative flex-1">
           <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
           <input type="text" id="interactive-folder-search" oninput="filterInteractiveFolders(this.value)" placeholder="Digite para filtrar por andar ou nome da pasta..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
         </div>
       </div>
-
       <div id="interactive-folders-list" class="p-4 space-y-2 overflow-y-auto flex-1 text-xs"></div>
-
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end">
         <button type="button" onclick="closeSelectFolderModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Cancelar</button>
       </div>
@@ -335,47 +330,26 @@
         <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-list-ul mr-1.5 text-indigo-600"></i> Todas as Pastas Cadastradas</h3>
         <button onclick="closeAllFoldersModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      
       <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-2 flex-none">
         <input type="text" id="modal-folder-search" oninput="filterModalFolders(this.value)" placeholder="Filtrar por nome do setor ou andar..." class="flex-1 min-w-[150px] bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        
-        <button onclick="exportAllFoldersZip()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-2 rounded-lg text-xs flex items-center gap-1 shadow-sm whitespace-nowrap" title="Baixar ZIP">
-          <i class="fa-solid fa-file-zipper"></i> ZIP
-        </button>
-
-        <label class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-2 rounded-lg text-xs flex items-center gap-1 shadow-sm cursor-pointer whitespace-nowrap" title="Importar ZIP">
-          <i class="fa-solid fa-file-arrow-up"></i> Import
-          <input type="file" id="import-zip-file" accept=".zip" onchange="importFolderStructureZip(event)" class="hidden">
-        </label>
+        <button onclick="exportAllFoldersZip()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-2 rounded-lg text-xs flex items-center gap-1 shadow-sm whitespace-nowrap"><i class="fa-solid fa-file-zipper"></i> ZIP</button>
+        <label class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-2 rounded-lg text-xs flex items-center gap-1 shadow-sm cursor-pointer whitespace-nowrap"><i class="fa-solid fa-file-arrow-up"></i> Import<input type="file" id="import-zip-file" accept=".zip" onchange="importFolderStructureZip(event)" class="hidden"></label>
       </div>
-
       <div class="bg-indigo-50 px-4 py-2.5 border-b border-indigo-100 flex flex-wrap items-center justify-between gap-2 flex-none">
         <div class="flex items-center gap-2">
           <input type="checkbox" id="select-all-folders-chk" onchange="toggleSelectAllModalFolders(this.checked)" class="rounded text-indigo-600 w-4 h-4 cursor-pointer">
           <span class="text-xs font-bold text-indigo-900" id="selected-folders-count">0 selecionadas</span>
         </div>
         <div class="flex flex-wrap items-center gap-1.5">
-          <select id="batch-move-floor-select" class="bg-white border border-indigo-300 rounded-lg px-2 py-1 text-xs font-bold text-indigo-900 focus:outline-none">
-            <option value="">Mover para...</option>
-          </select>
-          <button type="button" onclick="executeBatchMoveFolders()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap">
-            Mover
-          </button>
-          <button type="button" onclick="executeBatchDeleteFolders()" title="Excluir pastas selecionadas e seus itens" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1">
-            <i class="fa-solid fa-trash-can"></i> Excluir
-          </button>
-          <button type="button" onclick="executeAutoCleanup()" title="Limpar automaticamente pastas vazias e órfãs" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1">
-            <i class="fa-solid fa-broom"></i> Vazias
-          </button>
+          <select id="batch-move-floor-select" class="bg-white border border-indigo-300 rounded-lg px-2 py-1 text-xs font-bold text-indigo-900 focus:outline-none"><option value="">Mover para...</option></select>
+          <button type="button" onclick="executeBatchMoveFolders()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap">Mover</button>
+          <button type="button" onclick="executeBatchDeleteFolders()" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+          <button type="button" onclick="executeAutoCleanup()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm whitespace-nowrap flex items-center gap-1"><i class="fa-solid fa-broom"></i> Vazias</button>
         </div>
       </div>
-
       <div id="modal-all-folders-container" class="p-5 space-y-2 overflow-y-auto flex-1 text-xs"></div>
-
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between items-center">
-        <button type="button" onclick="downloadAllFoldersExcel()" class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1">
-          <i class="fa-solid fa-file-excel"></i> Exportar Lista (Excel)
-        </button>
+        <button type="button" onclick="downloadAllFoldersExcel()" class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"><i class="fa-solid fa-file-excel"></i> Exportar Lista (Excel)</button>
         <button type="button" onclick="closeAllFoldersModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
       </div>
     </div>
@@ -389,16 +363,9 @@
         <button onclick="closeSyncOptionsModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <p class="text-xs text-slate-600">Como deseja proceder com o envio para o Google Sheets?</p>
-      
       <div class="space-y-2">
-        <button onclick="executeSync('new')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-3 px-4 rounded-xl shadow flex items-center justify-between transition">
-          <span><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Enviar Apenas Novos</span>
-          <span class="text-[10px] bg-purple-800 px-2 py-0.5 rounded">Recomendado</span>
-        </button>
-        <button onclick="executeSync('all')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-3 px-4 rounded-xl shadow flex items-center justify-between transition">
-          <span><i class="fa-solid fa-list-check mr-2"></i> Sincronizar Tudo (Forçar)</span>
-          <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Completo</span>
-        </button>
+        <button onclick="executeSync('new')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-3 px-4 rounded-xl shadow flex items-center justify-between transition"><span><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Enviar Apenas Novos</span><span class="text-[10px] bg-purple-800 px-2 py-0.5 rounded">Recomendado</span></button>
+        <button onclick="executeSync('all')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-3 px-4 rounded-xl shadow flex items-center justify-between transition"><span><i class="fa-solid fa-list-check mr-2"></i> Sincronizar Tudo (Forçar)</span><span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Completo</span></button>
       </div>
       <button onclick="closeSyncOptionsModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2 rounded-xl">Cancelar</button>
     </div>
@@ -407,16 +374,10 @@
   <!-- MODAL DE LEMBRETE DO HOST NAME -->
   <div id="modal-host-hint" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden p-5 space-y-4 text-center">
-      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl">
-        <i class="fa-solid fa-lightbulb"></i>
-      </div>
+      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl"><i class="fa-solid fa-lightbulb"></i></div>
       <h3 class="font-bold text-slate-800 text-sm">Não encontrou a etiqueta no gabinete?</h3>
-      <p class="text-xs text-slate-600 leading-relaxed">
-        Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize somente os 12 números correspondentes no cadastro.
-      </p>
-      <button type="button" onclick="closeHostHintModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow">
-        Entendido!
-      </button>
+      <p class="text-xs text-slate-600 leading-relaxed">Olhe na <strong>área de trabalho</strong> da máquina! Procure pela informação do <strong>Host Name</strong> (ex: <code class="bg-slate-100 text-blue-700 px-1 py-0.5 rounded font-mono">PC991013727700</code>) e utilize somente os 12 números correspondentes no cadastro.</p>
+      <button type="button" onclick="closeHostHintModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow">Entendido!</button>
     </div>
   </div>
 
@@ -427,38 +388,23 @@
         <h3 class="font-bold text-purple-900 text-sm"><i class="fa-solid fa-square-poll-vertical mr-1.5 text-purple-600"></i> Relatório de Sincronização com o Google Sheets</h3>
         <button onclick="closeSyncReportModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
-
       <div id="printable-sync-report" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
         <div class="text-center pb-2 border-b">
           <h4 class="font-bold text-sm text-slate-800">Resumo da Sincronização de Dados</h4>
           <p id="sync-report-date" class="text-[11px] text-slate-500 mt-0.5"></p>
         </div>
-
         <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
-            <span class="block text-[10px] text-emerald-600 font-bold uppercase">Enviados (Novos)</span>
-            <span id="sync-count-sent" class="font-extrabold text-emerald-700 text-base">0</span>
-          </div>
-          <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
-            <span class="block text-[10px] text-amber-600 font-bold uppercase">Antigos / Duplicados</span>
-            <span id="sync-count-duplicates" class="font-extrabold text-amber-700 text-base">0</span>
-          </div>
-          <div class="bg-red-50 border border-red-200 p-2.5 rounded-xl">
-            <span class="block text-[10px] text-red-600 font-bold uppercase">Inconsistentes</span>
-            <span id="sync-count-inconsistent" class="font-extrabold text-red-700 text-base">0</span>
-          </div>
+          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl"><span class="block text-[10px] text-emerald-600 font-bold uppercase">Enviados (Novos)</span><span id="sync-count-sent" class="font-extrabold text-emerald-700 text-base">0</span></div>
+          <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl"><span class="block text-[10px] text-amber-600 font-bold uppercase">Antigos / Duplicados</span><span id="sync-count-duplicates" class="font-extrabold text-amber-700 text-base">0</span></div>
+          <div class="bg-red-50 border border-red-200 p-2.5 rounded-xl"><span class="block text-[10px] text-red-600 font-bold uppercase">Inconsistentes</span><span id="sync-count-inconsistent" class="font-extrabold text-red-700 text-base">0</span></div>
         </div>
-
         <div class="space-y-2">
           <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Detalhes dos Registos Analisados:</span>
           <div id="sync-details-container" class="space-y-1.5 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-52 overflow-y-auto font-mono text-[11px]"></div>
         </div>
       </div>
-
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between">
-        <button type="button" onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm flex items-center gap-1.5">
-          <i class="fa-solid fa-print"></i> Imprimir / Salvar PDF
-        </button>
+        <button type="button" onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-print"></i> Imprimir / Salvar PDF</button>
         <button type="button" onclick="closeSyncReportModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
       </div>
     </div>
@@ -515,14 +461,12 @@
       </div>
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end gap-2">
         <button type="button" onclick="closeExportModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-        <button type="button" onclick="generateAndDownloadCSV()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow flex items-center gap-1.5">
-          <i class="fa-solid fa-download"></i> Baixar Folha (Excel)
-        </button>
+        <button type="button" onclick="generateAndDownloadCSV()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow flex items-center gap-1.5"><i class="fa-solid fa-download"></i> Baixar Folha (Excel)</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: MACHINE DETAILS -->
+  <!-- MODAL: MACHINE DETAILS & HISTÓRICO DE LOGS (COM ABAS) -->
   <div id="modal-machine-details" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
       <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none bg-blue-50">
@@ -530,55 +474,70 @@
         <button onclick="closeMachineDetails()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div id="printable-ticket" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Nº do Ticket / O.S:</span>
-            <span id="detail-ticket" class="font-mono font-bold text-purple-700 text-sm">-</span>
+      <!-- ABAS DE NAVEGAÇÃO DO MODAL -->
+      <div class="flex border-b border-slate-200 bg-slate-50 px-5 pt-2 gap-2 flex-none text-xs font-bold">
+        <button type="button" onclick="switchMachineModalTab('details')" id="modal-tab-details" class="px-4 py-2 border-b-2 border-blue-600 text-blue-700 bg-white rounded-t-lg transition">Detalhes</button>
+        <button type="button" onclick="switchMachineModalTab('logs')" id="modal-tab-logs" class="px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">Histórico / Logs</button>
+      </div>
+
+      <!-- CONTEÚDO DA ABA: DETALHES -->
+      <div id="modal-content-details" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
+        <div id="printable-ticket" class="space-y-4">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Nº do Ticket / O.S:</span>
+              <span id="detail-ticket" class="font-mono font-bold text-purple-700 text-sm">-</span>
+            </div>
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Andar / Setor:</span>
+              <span id="detail-sector" class="font-bold text-indigo-900 text-right">-</span>
+            </div>
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Etiqueta Gabinete:</span>
+              <span id="detail-code" class="font-mono font-bold text-blue-700 text-sm"></span>
+            </div>
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Etiqueta Monitor:</span>
+              <span id="detail-monitor" class="font-mono font-bold text-emerald-700 text-sm"></span>
+            </div>
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Modelo / Tipo:</span>
+              <span id="detail-model" class="font-medium text-slate-800"></span>
+            </div>
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Sistema Operacional:</span>
+              <span id="detail-os" class="font-medium text-slate-800"></span>
+            </div>
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Estado:</span>
+              <span id="detail-status" class="px-2 py-0.5 rounded-full border bg-white font-medium"></span>
+            </div>
+            <div class="flex justify-between border-b pb-1.5">
+              <span class="text-slate-500 font-semibold">Periféricos do Conjunto:</span>
+              <span id="detail-peripherals" class="font-semibold text-slate-700">Nenhum</span>
+            </div>
+            <div class="flex justify-between pb-0.5">
+              <span class="text-slate-500 font-semibold">Data de Registo:</span>
+              <span id="detail-date" class="text-slate-600"></span>
+            </div>
           </div>
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Andar / Setor:</span>
-            <span id="detail-sector" class="font-bold text-indigo-900 text-right">-</span>
-          </div>
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Etiqueta Gabinete:</span>
-            <span id="detail-code" class="font-mono font-bold text-blue-700 text-sm"></span>
-          </div>
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Etiqueta Monitor:</span>
-            <span id="detail-monitor" class="font-mono font-bold text-emerald-700 text-sm"></span>
-          </div>
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Modelo / Tipo:</span>
-            <span id="detail-model" class="font-medium text-slate-800"></span>
-          </div>
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Sistema Operacional:</span>
-            <span id="detail-os" class="font-medium text-slate-800"></span>
-          </div>
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Estado:</span>
-            <span id="detail-status" class="px-2 py-0.5 rounded-full border bg-white font-medium"></span>
-          </div>
-          <div class="flex justify-between border-b pb-1.5">
-            <span class="text-slate-500 font-semibold">Periféricos do Conjunto:</span>
-            <span id="detail-peripherals" class="font-semibold text-slate-700">Nenhum</span>
-          </div>
-          <div class="flex justify-between pb-0.5">
-            <span class="text-slate-500 font-semibold">Data de Registo:</span>
-            <span id="detail-date" class="text-slate-600"></span>
+          <div>
+            <label class="block font-semibold text-slate-500 mb-1">Observações:</label>
+            <div id="detail-notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 min-h-[50px] whitespace-pre-wrap"></div>
           </div>
         </div>
-        <div>
-          <label class="block font-semibold text-slate-500 mb-1">Observações:</label>
-          <div id="detail-notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 min-h-[50px] whitespace-pre-wrap"></div>
+      </div>
+
+      <!-- CONTEÚDO DA ABA: LOGS / HISTÓRICO -->
+      <div id="modal-content-logs" class="hidden p-5 space-y-3 overflow-y-auto flex-1 text-xs bg-white">
+        <div class="text-[11px] text-slate-500 pb-1 border-b">Registo de quem criou e de todas as alterações efetuadas nesta máquina:</div>
+        <div id="machine-history-list" class="space-y-2">
+          <p class="text-xs text-slate-400 text-center py-6">A carregar histórico...</p>
         </div>
       </div>
 
       <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between">
-        <button type="button" onclick="printMachineTicket()" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm flex items-center gap-1.5">
-          <i class="fa-solid fa-print"></i> Imprimir Ticket
-        </button>
+        <button type="button" onclick="printMachineTicket()" class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-print"></i> Imprimir Ticket</button>
         <button type="button" onclick="closeMachineDetails()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
       </div>
     </div>
@@ -759,6 +718,7 @@
     let activeScannerTarget = 'code';
     let currentUser = null;
     let interactiveFolderCallback = null;
+    let currentViewingMachineId = null; // ID da máquina atualmente aberta no modal de detalhes
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -780,7 +740,7 @@
       document.getElementById('view-login').classList.remove('hidden');
     };
 
-    // FUNÇÃO DE AUDITORIA DE LOGS COM IDENTIFICAÇÃO DO UTILIZADOR
+    // FUNÇÕES DE LOG E HISTÓRICO ESPECÍFICO DE MÁQUINAS E AUDITORIA GERAL
     async function recordAuditLog(action, details) {
       if (!supabaseClient) return;
       try {
@@ -793,7 +753,25 @@
         };
         await supabaseClient.from('audit_logs').insert([logEntry]);
       } catch (e) {
-        console.error("Erro ao gravar log de auditoria:", e);
+        console.error("Erro ao gravar log geral:", e);
+      }
+    }
+
+    async function recordMachineHistory(machineId, actionType, description) {
+      if (!supabaseClient) return;
+      try {
+        const userName = currentUser ? currentUser.username : 'Sistema/Anónimo';
+        const historyEntry = {
+          id: 'mh_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          machine_id: machineId,
+          user_name: userName,
+          action_type: actionType,
+          description: description,
+          created_at: new Date().toISOString()
+        };
+        await supabaseClient.from('machine_history').insert([historyEntry]);
+      } catch (e) {
+        console.error("Erro ao gravar histórico da máquina:", e);
       }
     }
 
@@ -1224,12 +1202,15 @@
             ticket: newTicket 
           }).eq('id', m.id);
 
-          if (!error) updatedCount++;
+          if (!error) {
+            updatedCount++;
+            await recordMachineHistory(m.id, 'Atualização', `Recalculou ticket para ${newTicket}`);
+          }
         }
       }
 
-      await recordAuditLog('Recálculo de Tickets', `Recalculou os tickets do setor "${sec.name}" (${updatedCount} itens atualizados).`);
-      alert(`✅ Correção concluída!\n${updatedCount} registos atualizados para a regra da 6ª à 10ª casa.`);
+      await recordAuditLog('Recálculo de Tickets', `Recalculou os tickets do setor "${sec.name}" (${updatedCount} itens).`);
+      alert(`✅ Correção concluída!\n${updatedCount} registos atualizados.`);
       renderMachines();
     }
 
@@ -1331,6 +1312,7 @@
       if (!m) return;
 
       openInteractiveFolderSelector(`Mover máquina (${m.code}) para...`, async (targetSector) => {
+        const oldSec = sectors.find(s => s.id === m.sector_id);
         const newTicket = generateTicketFromCode(m.code);
 
         const { error } = await supabaseClient.from('machines').update({ sector_id: targetSector.id, ticket: newTicket }).eq('id', machineId);
@@ -1338,6 +1320,7 @@
 
         m.sector_id = targetSector.id;
         m.ticket = newTicket;
+        await recordMachineHistory(machineId, 'Movimentação', `Moveu do setor "${oldSec ? oldSec.name : '?'}" para "${targetSector.name}"`);
         await recordAuditLog('Movimentação de Máquina', `Moveu o equipamento Gabinete: ${m.code} para o setor "${targetSector.name}"`);
         alert(`Equipamento ${m.code} movido com sucesso para: ${targetSector.name} (Ticket: ${newTicket})`);
         renderFloorsAndSectors();
@@ -1890,7 +1873,11 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
           };
 
           const { error: mErr } = await supabaseClient.from('machines').insert([newMachine]);
-          if (!mErr) { machines.push(newMachine); importedMachines++; }
+          if (!mErr) { 
+            machines.push(newMachine); 
+            importedMachines++;
+            await recordMachineHistory(newMachine.id, 'Criação', 'Importado via pacote ZIP');
+          }
         }
 
         await recordAuditLog('Importação de ZIP', `Importou pacote ZIP (${importedMachines} máquinas).`);
@@ -2298,7 +2285,72 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       });
     }
 
+    // FUNÇÕES DE ALTERNÂNCIA DE ABAS NO MODAL DE DETALHES
+    function switchMachineModalTab(tabName) {
+      const tabDetails = document.getElementById('modal-tab-details');
+      const tabLogs = document.getElementById('modal-tab-logs');
+      const contentDetails = document.getElementById('modal-content-details');
+      const contentLogs = document.getElementById('modal-content-logs');
+
+      if (tabName === 'details') {
+        tabDetails.className = "px-4 py-2 border-b-2 border-blue-600 text-blue-700 bg-white rounded-t-lg transition";
+        tabLogs.className = "px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+        contentDetails.classList.remove('hidden');
+        contentLogs.classList.add('hidden');
+      } else {
+        tabLogs.className = "px-4 py-2 border-b-2 border-blue-600 text-blue-700 bg-white rounded-t-lg transition";
+        tabDetails.className = "px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+        contentLogs.classList.remove('hidden');
+        contentDetails.classList.add('hidden');
+        loadMachineLogsIntoModal(currentViewingMachineId);
+      }
+    }
+
+    async function loadMachineLogsIntoModal(machineId) {
+      const container = document.getElementById('machine-history-list');
+      if (!container) return;
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">A carregar histórico...</p>';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('machine_history')
+          .select('*')
+          .eq('machine_id', machineId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Sem registos de histórico para este equipamento.</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        data.forEach(log => {
+          const dateFormatted = new Date(log.created_at).toLocaleString('pt-PT');
+          const isCreation = log.action_type === 'Criação';
+          const badgeColor = isCreation ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-blue-100 text-blue-800 border-blue-200';
+
+          container.innerHTML += `
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs">
+              <div class="flex justify-between items-center">
+                <span class="px-2 py-0.5 rounded-full font-bold border text-[10px] ${badgeColor}">${log.action_type}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${dateFormatted}</span>
+              </div>
+              <p class="font-medium text-slate-800 mt-1">${log.description}</p>
+              <p class="text-[11px] text-slate-500"><i class="fa-solid fa-user text-slate-400 mr-1"></i> Utilizador: <strong class="text-blue-700">${log.user_name}</strong></p>
+            </div>
+          `;
+        });
+      } catch (err) {
+        container.innerHTML = '<p class="text-xs text-red-500 text-center py-4">Erro ao carregar o histórico do servidor.</p>';
+      }
+    }
+
     function openMachineDetails(machineId) {
+      currentViewingMachineId = machineId;
+      switchMachineModalTab('details'); // Sempre abre na aba de detalhes por defeito
+
       const m = machines.find(item => item.id === machineId);
       if (!m) return;
       
@@ -2321,7 +2373,10 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       document.getElementById('modal-machine-details').classList.remove('hidden');
     }
 
-    function closeMachineDetails() { document.getElementById('modal-machine-details').classList.add('hidden'); }
+    function closeMachineDetails() { 
+      document.getElementById('modal-machine-details').classList.add('hidden'); 
+      currentViewingMachineId = null;
+    }
     function printMachineTicket() { window.print(); }
 
     function openMachineModal() {
@@ -2446,6 +2501,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
             if (macErr) { alert("Erro ao inserir máquina na importação: " + macErr.message); continue; }
 
             machines.push(newMachine);
+            await recordMachineHistory(newMachine.id, 'Criação', 'Registo importado via Excel');
             count++;
           }
 
@@ -2541,18 +2597,31 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
       if (editId) {
+        const oldMachine = machines.find(item => item.id === editId);
+        let changesSummary = [];
+        if (oldMachine) {
+          if (oldMachine.status !== status) changesSummary.push(`Estado: ${oldMachine.status} ➔ ${status}`);
+          if (oldMachine.model !== model) changesSummary.push(`Modelo: ${oldMachine.model} ➔ ${model}`);
+          if (oldMachine.code !== code) changesSummary.push(`Gabinete: ${oldMachine.code} ➔ ${code}`);
+          if (oldMachine.monitor !== monitor) changesSummary.push(`Monitor: ${oldMachine.monitor} ➔ ${monitor}`);
+          if (oldMachine.os !== os) changesSummary.push(`SO: ${oldMachine.os} ➔ ${os}`);
+        }
+        const descChanges = changesSummary.length > 0 ? changesSummary.join(' | ') : 'Atualizou dados gerais do equipamento';
+
         const { error } = await supabaseClient.from('machines').update({ ticket, code, monitor, model, os, status, peripherals, notes }).eq('id', editId);
         if (error) { alert("Erro ao atualizar máquina: " + error.message); return; }
 
-        const m = machines.find(item => item.id === editId);
-        if(m) {
-          m.ticket = ticket; m.code = code; m.monitor = monitor; m.model = model; m.os = os; m.status = status;
-          m.peripherals = peripherals; m.notes = notes;
+        if(oldMachine) {
+          oldMachine.ticket = ticket; oldMachine.code = code; oldMachine.monitor = monitor; oldMachine.model = model; oldMachine.os = os; oldMachine.status = status;
+          oldMachine.peripherals = peripherals; oldMachine.notes = notes;
         }
-        await recordAuditLog('Atualização de Máquina', `Atualizou os dados da máquina Gabinete: ${code} (Ticket: ${ticket})`);
+
+        await recordMachineHistory(editId, 'Modificação', descChanges);
+        await recordAuditLog('Atualização de Máquina', `Atualizou máquina Gabinete: ${code} (Ticket: ${ticket})`);
       } else {
+        const newId = 'mac_' + Date.now();
         const newMachine = {
-          id: 'mac_' + Date.now(), sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
+          id: newId, sector_id: currentSectorId, ticket, code, monitor, model, os, status, peripherals, notes,
           date: dateStr, timestamp: Date.now()
         };
 
@@ -2560,6 +2629,7 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
         if (error) { alert("Erro ao salvar máquina no servidor: " + error.message); return; }
 
         machines.push(newMachine);
+        await recordMachineHistory(newId, 'Criação', `Registou nova máquina Gabinete: ${code} (Ticket: ${ticket})`);
         await recordAuditLog('Registo de Máquina', `Cadastrou nova máquina Gabinete: ${code} (Ticket: ${ticket})`);
       }
 
