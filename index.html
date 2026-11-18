@@ -81,24 +81,34 @@
           Entrar no Sistema
         </button>
       </form>
-      
     </div>
   </div>
 
   <!-- HEADER -->
   <header class="bg-blue-600 text-white shadow-md flex-none px-4 py-3 flex items-center justify-between z-10">
-    <div class="flex items-center gap-3">
-      <button id="btn-back" onclick="goBack()" class="hidden text-white hover:text-blue-100 text-lg">
+    <div class="flex items-center gap-3 min-w-0">
+      <button id="btn-back" onclick="goBack()" class="hidden text-white hover:text-blue-100 text-lg flex-none">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
-      <h1 id="app-title" class="font-bold text-lg leading-tight truncate">InfraGest - Andares & Setores</h1>
+      <h1 id="app-title" class="font-bold text-base leading-tight truncate">InfraGest - Andares & Setores</h1>
     </div>
-    <div class="flex items-center gap-2">
+    
+    <!-- ÁREA DOS BOTÕES E DO UTILIZADOR NO CABEÇALHO -->
+    <div class="flex items-center gap-2 flex-none">
       <button onclick="openSyncOptionsModal()" title="Atualizar Folha Online" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow" id="btn-sync-sheets">
         <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Sync Sheets</span>
       </button>
       <button onclick="openExportModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow">
         <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Baixar</span>
+      </button>
+
+      <!-- INDICADOR DO UTILIZADOR LOGADO & BOTÃO DE LOGOUT -->
+      <div class="hidden md:flex items-center gap-1.5 bg-blue-700/60 border border-blue-500/50 px-2.5 py-1.5 rounded-lg text-xs font-semibold">
+        <i class="fa-solid fa-user-circle text-blue-200"></i>
+        <span id="header-username-display" class="text-white truncate max-w-[100px]">-</span>
+      </div>
+      <button onclick="handleLogout()" title="Terminar Sessão" class="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1.5 shadow transition">
+        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Sair</span>
       </button>
     </div>
   </header>
@@ -767,7 +777,6 @@
       }
     }
 
-    // REGISTO DETALHADO DE HISTÓRICO COM DIFF (VALOR ANTIGO E NOVO)
     async function recordMachineHistory(machineId, actionType, description, diffData = null) {
       if (!supabaseClient) return;
       try {
@@ -1137,8 +1146,13 @@
 
     function initApp() {
       renderFloorsAndSectors();
-      document.getElementById('current-user-display').innerText = currentUser.username;
+      const usernameVal = currentUser ? currentUser.username : '-';
+      
+      document.getElementById('current-user-display').innerText = usernameVal;
       document.getElementById('current-role-display').innerText = currentUser.role.toUpperCase();
+      
+      const headerUserEl = document.getElementById('header-username-display');
+      if (headerUserEl) headerUserEl.innerText = usernameVal;
     }
 
     async function loadDataFromServer() {
@@ -1961,29 +1975,33 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
     function closeUserModal() { document.getElementById('modal-user').classList.add('hidden'); }
 
     async function saveUser(e) {
-  e.preventDefault();
-  const username = document.getElementById('modal-username').value.trim();
-  const password = document.getElementById('modal-password').value.trim();
-  const role = document.getElementById('modal-role').value; // Captura o valor correto do select (admin ou technician)
+      e.preventDefault();
+      const username = document.getElementById('modal-username').value.trim();
+      const password = document.getElementById('modal-password').value.trim();
+      const role = document.getElementById('modal-role').value;
+      
+      const newUser = { id: 'usr_' + Date.now(), username, password, role };
+      
+      const { error } = await supabaseClient.from('users').insert([newUser]);
+      if (error) { alert("Erro ao salvar utilizador: " + error.message); return; }
 
-  const newUser = { 
-    id: 'usr_' + Date.now(), 
-    username, 
-    password, 
-    role: role // Utiliza o perfil selecionado no modal
-  };
-  
-  const { error } = await supabaseClient.from('users').insert([newUser]);
-  if (error) { 
-    alert("Erro ao salvar utilizador: " + error.message); 
-    return; 
-  }
+      usersList.push(newUser);
+      await recordAuditLog('Registo de Utilizador', `Criou o novo utilizador "${username}" com perfil ${role.toUpperCase()}`);
+      closeUserModal();
+      loadUsersManagement();
+    }
 
-  usersList.push(newUser);
-  await recordAuditLog('Registo de Utilizador', `Criou o novo utilizador "${username}" com perfil ${role.toUpperCase()}`);
-  closeUserModal();
-  loadUsersManagement();
-}
+    async function deleteUser(id, username) {
+      if (username === 'admin') { alert("Não pode remover o admin principal."); return; }
+      if (confirm(`Remover ${username}?`)) {
+        const { error } = await supabaseClient.from('users').delete().eq('id', id);
+        if (error) { alert("Erro ao remover utilizador: " + error.message); return; }
+
+        usersList = usersList.filter(u => u.id !== id);
+        await recordAuditLog('Remoção de Utilizador', `Removeu o utilizador "${username}"`);
+        loadUsersManagement();
+      }
+    }
 
     async function addNewFloorPrompt() {
       const floorName = prompt("Digite o nome da nova aba/andar (ex: 2º Andar, Subsolo, etc.):");
@@ -2378,7 +2396,6 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       }
     }
 
-    // ABRIR MODAL COM O COMPARATIVO DE ALTERAÇÕES (EX: ANTIGO ➔ NOVO)
     function openDiffDetailsModal(detailsJsonStr, actionType, dateStr) {
       const container = document.getElementById('diff-modal-content');
       container.innerHTML = '';
@@ -2668,7 +2685,6 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       if (editId) {
         const oldMachine = machines.find(item => item.id === editId);
         
-        // Optimistic Locking: verificar se a máquina foi modificada no servidor entretanto
         if (oldMachine && oldMachine.updated_at) {
           try {
             const { data: latestCheck } = await supabaseClient.from('machines').select('updated_at').eq('id', editId).single();
