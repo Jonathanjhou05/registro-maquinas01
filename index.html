@@ -166,17 +166,17 @@
         <div id="floors-tabs-container" class="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs"></div>
       </div>
 
-      <!-- CABEÇALHO DO ANDAR ATUAL E BOTÕES DE CONFERÊNCIA / IMPORTAÇÃO INTEGRADOS -->
-      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-2">
+      <!-- CABEÇALHO DO ANDAR ATUAL E BOTÃO DE IMPORTAÇÃO INTEGRADO -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
           <h3 id="current-floor-title" class="font-bold text-sm text-indigo-900">Andar</h3>
           <p id="current-floor-subtitle" class="text-[11px] text-slate-500">Selecione um andar acima</p>
         </div>
         <div class="flex items-center gap-2">
           <!-- BOTÃO DE CONFERÊNCIA DE GABINETES VIA PLANILHA -->
-          <label title="Importar planilha de gabinetes para conferir quais estão cadastrados ou não" class="bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer transition">
-            <i class="fa-solid fa-magnifying-glass-chart"></i> <span>Conferir Planilha</span>
-            <input type="file" id="reconcile-excel-file" accept=".xlsx, .xls, .csv" onchange="handleExcelReconciliation(event)" class="hidden">
+          <label title="Importar planilha com números de gabinete para conferir quais já estão cadastrados" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer transition">
+            <i class="fa-solid fa-magnifying-glass-chart"></i> <span>Conferir Gabinetes</span>
+            <input type="file" id="audit-cabinets-file" accept=".xlsx, .xls, .csv" onchange="handleCabinetAuditImport(event)" class="hidden">
           </label>
           <!-- BOTÃO DE IMPORTAÇÃO EXCEL -->
           <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow cursor-pointer transition">
@@ -314,44 +314,6 @@
       <span class="text-[10px] font-medium">Ajustes</span>
     </button>
   </nav>
-
-  <!-- MODAL: CONFERÊNCIA DE GABINETES EM LOTE -->
-  <div id="modal-reconciliation" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
-      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-cyan-50 flex-none">
-        <h3 class="font-bold text-cyan-900 text-sm"><i class="fa-solid fa-magnifying-glass-chart mr-1.5 text-cyan-600"></i> Conferência de Gabinetes</h3>
-        <button onclick="closeReconciliationModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs bg-white">
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
-            <span class="block text-[10px] text-slate-500 font-bold uppercase">Analisados</span>
-            <span id="rec-total-count" class="font-extrabold text-slate-800 text-base">0</span>
-          </div>
-          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
-            <span class="block text-[10px] text-emerald-600 font-bold uppercase">Cadastrados</span>
-            <span id="rec-found-count" class="font-extrabold text-emerald-700 text-base">0</span>
-          </div>
-          <div class="bg-red-50 border border-red-200 p-2.5 rounded-xl">
-            <span class="block text-[10px] text-red-600 font-bold uppercase">Não Cadastrados</span>
-            <span id="rec-missing-count" class="font-extrabold text-red-700 text-base">0</span>
-          </div>
-        </div>
-
-        <div class="flex gap-1.5">
-          <button type="button" onclick="filterReconciliationTable('all')" class="px-3 py-1.5 rounded-lg font-semibold bg-cyan-600 text-white shadow-sm">Todos</button>
-          <button type="button" onclick="filterReconciliationTable('found')" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Cadastrados</button>
-          <button type="button" onclick="filterReconciliationTable('missing')" class="px-3 py-1.5 rounded-lg font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Não Cadastrados</button>
-        </div>
-
-        <div id="rec-results-list" class="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-60 overflow-y-auto"></div>
-      </div>
-      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-between items-center">
-        <button type="button" onclick="downloadReconciliationExcel()" class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Baixar Planilha (.xlsx)</button>
-        <button type="button" onclick="closeReconciliationModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
-      </div>
-    </div>
-  </div>
 
   <!-- MODAL: SELETOR DE PASTAS -->
   <div id="modal-select-folder" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -783,7 +745,6 @@
     let currentUser = null;
     let interactiveFolderCallback = null;
     let currentViewingMachineId = null;
-    let lastReconciliationResults = [];
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -860,192 +821,6 @@
       }
       return `N°${cleanCode}`;
     }
-
-    /* =====================================================================
-       MÓDULO DE PESQUISA E CONFERÊNCIA DE GABINETES EM LOTE
-       ===================================================================== */
-    async function handleExcelReconciliation(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async function(evt) {
-        try {
-          const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rawRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-          if (!rawRows || rawRows.length === 0) {
-            alert("⚠️ A planilha selecionada está vazia.");
-            return;
-          }
-
-          let results = [];
-          const headerKeywords = ['gabinete', 'patrimonio', 'patrimônio', 'codigo', 'código', 'etiqueta', 'hostname', 'host name', 'computador', 'serial'];
-          let targetColIndex = 0;
-          let startRow = 0;
-
-          if (rawRows[0] && Array.isArray(rawRows[0])) {
-            const firstRowStrings = rawRows[0].map(cell => String(cell || '').trim().toLowerCase());
-            const foundHeaderIdx = firstRowStrings.findIndex(val => headerKeywords.some(kw => val.includes(kw)));
-            if (foundHeaderIdx !== -1) {
-              targetColIndex = foundHeaderIdx;
-              startRow = 1;
-            }
-          }
-
-          for (let i = startRow; i < rawRows.length; i++) {
-            const row = rawRows[i];
-            if (!row || row.length === 0) continue;
-
-            let rawValue = row[targetColIndex];
-            if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') {
-              rawValue = row.find(cell => cell !== undefined && cell !== null && String(cell).trim() !== '');
-            }
-
-            if (rawValue === undefined || rawValue === null) continue;
-
-            const originalStr = String(rawValue).trim();
-            if (!originalStr) continue;
-
-            const cleanedSearchCode = cleanOnlyNumbers(originalStr);
-            if (!cleanedSearchCode) continue;
-
-            const foundMachine = machines.find(m => {
-              const dbCode = cleanOnlyNumbers(m.code);
-              return dbCode === cleanedSearchCode || (cleanedSearchCode.length >= 6 && dbCode.endsWith(cleanedSearchCode));
-            });
-
-            if (foundMachine) {
-              const sec = sectors.find(s => s.id === foundMachine.sector_id);
-              const floor = sec ? floors.find(f => f.id === sec.floor_id) : null;
-              results.push({
-                inputGabinete: originalStr,
-                cleanedCode: cleanedSearchCode,
-                found: true,
-                statusText: 'JÁ CADASTRADO',
-                floorName: floor ? floor.name : 'Sem Andar',
-                sectorName: sec ? sec.name : 'Sem Setor',
-                ticket: foundMachine.ticket || '-',
-                monitor: foundMachine.monitor || '-',
-                model: foundMachine.model || '-',
-                machineStatus: foundMachine.status || '-'
-              });
-            } else {
-              results.push({
-                inputGabinete: originalStr,
-                cleanedCode: cleanedSearchCode,
-                found: false,
-                statusText: 'NÃO CADASTRADO',
-                floorName: '-',
-                sectorName: '-',
-                ticket: '-',
-                monitor: '-',
-                model: '-',
-                machineStatus: '-'
-              });
-            }
-          }
-
-          if (results.length === 0) {
-            alert("⚠️ Nenhum número de gabinete válido foi encontrado na planilha.");
-            return;
-          }
-
-          lastReconciliationResults = results;
-          const foundCount = results.filter(r => r.found).length;
-          const missingCount = results.filter(r => !r.found).length;
-
-          document.getElementById('rec-total-count').innerText = results.length;
-          document.getElementById('rec-found-count').innerText = foundCount;
-          document.getElementById('rec-missing-count').innerText = missingCount;
-
-          filterReconciliationTable('all');
-          document.getElementById('modal-reconciliation').classList.remove('hidden');
-
-          downloadReconciliationExcel();
-          await recordAuditLog('Conferência de Gabinetes', `Conferiu planilha com ${results.length} gabinetes (${foundCount} cadastrados, ${missingCount} não cadastrados).`);
-
-        } catch (err) {
-          alert("❌ Erro ao processar planilha: " + err.message);
-        } finally {
-          e.target.value = '';
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    function filterReconciliationTable(filterMode) {
-      const container = document.getElementById('rec-results-list');
-      if (!container) return;
-      container.innerHTML = '';
-
-      let listToRender = lastReconciliationResults;
-      if (filterMode === 'found') {
-        listToRender = lastReconciliationResults.filter(r => r.found);
-      } else if (filterMode === 'missing') {
-        listToRender = lastReconciliationResults.filter(r => !r.found);
-      }
-
-      if (listToRender.length === 0) {
-        container.innerHTML = `<p class="text-center text-slate-400 py-4 text-xs">Nenhum registo nesta categoria.</p>`;
-        return;
-      }
-
-      listToRender.forEach(item => {
-        if (item.found) {
-          container.innerHTML += `
-            <div class="bg-white p-2.5 rounded-lg border border-emerald-200 flex justify-between items-center text-xs shadow-sm">
-              <div>
-                <span class="font-mono font-bold text-blue-800">${item.inputGabinete}</span>
-                <p class="text-[10px] text-slate-600 mt-0.5"><i class="fa-solid fa-location-dot text-indigo-500 mr-1"></i> <strong>${item.floorName}</strong> > ${item.sectorName} | Ticket: <span class="font-mono text-purple-700 font-bold">${item.ticket}</span></p>
-              </div>
-              <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold text-[10px] flex-none">✅ CADASTRADO</span>
-            </div>
-          `;
-        } else {
-          container.innerHTML += `
-            <div class="bg-white p-2.5 rounded-lg border border-red-200 flex justify-between items-center text-xs shadow-sm">
-              <div>
-                <span class="font-mono font-bold text-slate-800">${item.inputGabinete}</span>
-                <p class="text-[10px] text-red-500 mt-0.5">Equipamento não localizado na base de dados atual</p>
-              </div>
-              <span class="bg-red-100 text-red-800 border border-red-200 px-2 py-0.5 rounded-full font-bold text-[10px] flex-none">❌ NÃO CADASTRADO</span>
-            </div>
-          `;
-        }
-      });
-    }
-
-    function downloadReconciliationExcel() {
-      if (!lastReconciliationResults || lastReconciliationResults.length === 0) return;
-
-      const exportRows = lastReconciliationResults.map(item => ({
-        'Gabinete Pesquisado': item.inputGabinete,
-        'Código Limpo': item.cleanedCode,
-        'Situação no Sistema': item.statusText,
-        'Andar Localizado': item.floorName,
-        'Setor / Pasta': item.sectorName,
-        'Nº Ticket': item.ticket,
-        'Monitor Vinculado': item.monitor,
-        'Modelo': item.model,
-        'Estado': item.machineStatus
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(exportRows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Conferencia_Gabinetes");
-
-      const fileName = `InfraGest_Conferencia_Gabinetes_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
-    }
-
-    function closeReconciliationModal() {
-      document.getElementById('modal-reconciliation').classList.add('hidden');
-    }
-
-    /* ===================================================================== */
 
     function loadCustomPeripheralsFromStorage() {
       try {
@@ -3081,5 +2856,247 @@ ${m.notes || 'Nenhuma observação cadastrada.'}
       });
     }
   </script>
+
+  <!-- MODAL: RESULTADO DA CONFERÊNCIA DE GABINETES -->
+  <div id="modal-cabinet-audit" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50 flex-none">
+        <h3 class="font-bold text-indigo-900 text-sm"><i class="fa-solid fa-magnifying-glass-chart mr-1.5 text-indigo-600"></i> Conferência de Gabinetes por Planilha</h3>
+        <button onclick="closeCabinetAuditModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <p id="audit-modal-filename" class="text-[11px] text-slate-500 font-semibold"></p>
+        <div class="grid grid-cols-3 gap-2.5 text-center">
+          <div class="bg-blue-50 border border-blue-200 p-2.5 rounded-xl">
+            <span class="block text-[10px] text-blue-600 font-bold uppercase">Total Analisado</span>
+            <span id="modal-audit-total" class="font-extrabold text-blue-800 text-base">0</span>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
+            <span class="block text-[10px] text-emerald-600 font-bold uppercase">Já Cadastrados</span>
+            <span id="modal-audit-found" class="font-extrabold text-emerald-700 text-base">0</span>
+          </div>
+          <div class="bg-red-50 border border-red-200 p-2.5 rounded-xl">
+            <span class="block text-[10px] text-red-600 font-bold uppercase">Não Cadastrados</span>
+            <span id="modal-audit-missing" class="font-extrabold text-red-700 text-base">0</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <select id="modal-audit-filter" onchange="renderCabinetAuditModalTable()" class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white">
+            <option value="ALL">Todos os registros</option>
+            <option value="Cadastrado">Somente Cadastrados</option>
+            <option value="Não Cadastrado">Somente Não Cadastrados</option>
+          </select>
+          <button type="button" onclick="exportLastCabinetAuditReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-file-excel"></i> Baixar Planilha (.xlsx)
+          </button>
+        </div>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500">
+              <tr>
+                <th class="py-2 px-3">Gabinete</th>
+                <th class="py-2 px-3">Status</th>
+                <th class="py-2 px-3">Ticket</th>
+                <th class="py-2 px-3">Andar / Setor</th>
+                <th class="py-2 px-3">Observação</th>
+              </tr>
+            </thead>
+            <tbody id="modal-audit-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 flex-none bg-slate-50 flex justify-end">
+        <button type="button" onclick="closeCabinetAuditModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-100">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let lastCabinetAuditRows = [];
+
+    function normalizeCabinetCode(val) {
+      const cleaned = cleanOnlyNumbers(val);
+      if (cleaned === 'NÃO SE APLICA') return 'NÃO SE APLICA';
+      return String(val ?? '').trim().toUpperCase();
+    }
+
+    function extractCabinetFromRow(row) {
+      if (!row || typeof row !== 'object') return '';
+      const candidateKeys = [
+        'GABINETE', 'GAB', 'NUMERO_GABINETE', 'N_GABINETE', 'NUM_GABINETE',
+        'ETIQUETA_GABINETE', 'CODIGO', 'CODE', 'PATRIMONIO', 'TAG', 'ATIVO'
+      ];
+      const entries = Object.entries(row);
+      for (const [key, value] of entries) {
+        const cleanKey = String(key)
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^A-Z0-9]/gi, '_')
+          .toUpperCase();
+        if (candidateKeys.includes(cleanKey) && String(value ?? '').trim() !== '') {
+          return String(value).trim();
+        }
+      }
+      for (const [, value] of entries) {
+        if (String(value ?? '').trim() !== '') {
+          return String(value).trim();
+        }
+      }
+      return '';
+    }
+
+    function findMachineLocationInfo(machine) {
+      const sector = sectors.find(s => s.id === machine.sector_id);
+      const floor = sector ? floors.find(f => f.id === sector.floor_id) : null;
+      return {
+        floorName: floor ? floor.name : 'Não identificado',
+        sectorName: sector ? sector.name : 'Não identificado'
+      };
+    }
+
+    function closeCabinetAuditModal() {
+      document.getElementById('modal-cabinet-audit').classList.add('hidden');
+    }
+
+    function exportLastCabinetAuditReport() {
+      if (!lastCabinetAuditRows.length) {
+        alert('Nenhuma conferência realizada ainda.');
+        return;
+      }
+      const outWorkbook = XLSX.utils.book_new();
+      const outSheet = XLSX.utils.json_to_sheet(lastCabinetAuditRows);
+      outSheet['!cols'] = [
+        { wch: 24 },
+        { wch: 18 },
+        { wch: 16 },
+        { wch: 28 },
+        { wch: 16 },
+        { wch: 24 },
+        { wch: 24 },
+        { wch: 34 }
+      ];
+      XLSX.utils.book_append_sheet(outWorkbook, outSheet, 'Conferencia_Gabinetes');
+      const timestamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(outWorkbook, `conferencia_gabinetes_${timestamp}.xlsx`);
+    }
+
+    function renderCabinetAuditModalTable() {
+      const tbody = document.getElementById('modal-audit-tbody');
+      const filter = document.getElementById('modal-audit-filter')?.value || 'ALL';
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const filtered = lastCabinetAuditRows.filter(r => filter === 'ALL' || r.STATUS_CADASTRO === filter);
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">Nenhum registro encontrado.</td></tr>`;
+        return;
+      }
+      filtered.forEach(row => {
+        const isReg = row.STATUS_CADASTRO === 'Cadastrado';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="py-2 px-3 font-mono font-bold text-blue-700">${row.GABINETE_CONSULTADO}</td>
+          <td class="py-2 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isReg ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${row.STATUS_CADASTRO}</span></td>
+          <td class="py-2 px-3 font-mono text-purple-700">${row.TICKET_OS}</td>
+          <td class="py-2 px-3 text-slate-700">${isReg ? `${row.ANDAR} > ${row.SETOR}` : '-'}</td>
+          <td class="py-2 px-3 text-slate-500">${row.OBSERVACAO}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function handleCabinetAuditImport(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      if (typeof XLSX === 'undefined') {
+        alert('Biblioteca XLSX não carregada.');
+        event.target.value = '';
+        return;
+      }
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+        if (!rows.length) {
+          alert('A planilha selecionada está vazia.');
+          event.target.value = '';
+          return;
+        }
+
+        const machineByCode = new Map();
+        const machineByNum = new Map();
+        machines.forEach(m => {
+          const norm = normalizeCabinetCode(m.code);
+          if (norm && !machineByCode.has(norm)) machineByCode.set(norm, m);
+          const digits = cleanOnlyNumbers(m.code);
+          if (digits && digits !== 'NÃO SE APLICA' && !machineByNum.has(digits)) machineByNum.set(digits, m);
+        });
+
+        let foundCount = 0;
+        let missingCount = 0;
+        const seenInSheet = new Set();
+
+        const reportRows = rows
+          .map(row => extractCabinetFromRow(row))
+          .filter(code => code !== '')
+          .map(rawCode => {
+            const normCode = normalizeCabinetCode(rawCode);
+            const digitsCode = cleanOnlyNumbers(rawCode);
+            const isDup = seenInSheet.has(normCode);
+            seenInSheet.add(normCode);
+
+            const matched = machineByCode.get(normCode) || (digitsCode && digitsCode !== 'NÃO SE APLICA' ? machineByNum.get(digitsCode) : null);
+            if (matched) {
+              foundCount++;
+              const loc = findMachineLocationInfo(matched);
+              return {
+                GABINETE_CONSULTADO: rawCode,
+                STATUS_CADASTRO: 'Cadastrado',
+                TICKET_OS: matched.ticket || '-',
+                MODELO: matched.model || '-',
+                ESTADO_ATUAL: matched.status || '-',
+                ANDAR: loc.floorName,
+                SETOR: loc.sectorName,
+                OBSERVACAO: isDup ? 'Repetido na planilha importada' : 'Cadastrado no sistema'
+              };
+            } else {
+              missingCount++;
+              return {
+                GABINETE_CONSULTADO: rawCode,
+                STATUS_CADASTRO: 'Não Cadastrado',
+                TICKET_OS: '-',
+                MODELO: '-',
+                ESTADO_ATUAL: '-',
+                ANDAR: '-',
+                SETOR: '-',
+                OBSERVACAO: isDup ? 'Não cadastrado (repetido na planilha)' : 'Não consta no inventário'
+              };
+            }
+          });
+
+        if (!reportRows.length) {
+          alert('Nenhum número de gabinete encontrado na planilha.');
+          event.target.value = '';
+          return;
+        }
+
+        lastCabinetAuditRows = reportRows;
+        document.getElementById('audit-modal-filename').innerText = `Arquivo: ${file.name}`;
+        document.getElementById('modal-audit-total').innerText = reportRows.length;
+        document.getElementById('modal-audit-found').innerText = foundCount;
+        document.getElementById('modal-audit-missing').innerText = missingCount;
+        document.getElementById('modal-cabinet-audit').classList.remove('hidden');
+        renderCabinetAuditModalTable();
+        exportLastCabinetAuditReport();
+        await recordAuditLog('Conferência de Gabinetes', `Conferiu ${reportRows.length} gabinetes via planilha "${file.name}" (${foundCount} cadastrados, ${missingCount} não cadastrados).`);
+      } catch (err) {
+        console.error('Erro na conferência de gabinetes:', err);
+        alert('Erro ao processar planilha: ' + err.message);
+      } finally {
+        event.target.value = '';
+      }
+    }
+  </script>
 </body>
+
 </html>
